@@ -1,8 +1,190 @@
-\documentclass{article}
+\documentclass[12pt]{article}
+
+\usepackage{amsmath,amssymb,fancyhdr,palatino}
+\usepackage[textheight=8in,textwidth=6.5in]{geometry}
+
+\lhead{STAT 135}
+\chead{Demonstration \#1}
+\rhead{Survey Sampling}
+\cfoot{\thepage}
+
+\newcommand{\R}{\texttt{R}}
 
 \begin{document}
 
-This is the Demo file for the first week
+<<globalParameters,echo=FALSE>>=
+set.seed(1234)
+opts_chunk$set(comment="",tidy=F)
+@
 
+\pagestyle{fancy}
 
+\paragraph{The Basics:}
+Just like with any language, before we can do anything \textit{remotely} complicated, we need to make sure we have the basics down. For starters, we should know a few things about \R:
+
+\begin{enumerate}
+  \item The primitive object in \R{} is a vector. Explicitly, two variables, $x = 1$, and $y = (1,2)$ are both identical objects to \R{} (they differ only in their ``length''). Check it out:
+  <<>>=
+  x <- 1
+  y <- c(1,2)
+  length(x)
+  length(y)
+  @
+  \item \R{} works over vectors in an element-wise fashion. So, if we want to (say) square every component of a vector, we just ``square'' the vector:
+  <<>>=
+  x <- 2:6
+  x
+  x^2
+  @
+  \item Perhaps somewhat unintuitively, functions in \R{} are variables. This is a subtle point so let's just illustrate how to make a simple function, and then call it on some data:
+  <<>>=
+  addOne <- function(z) {
+    return(z+1)
+  }
+
+  addOne(1)
+
+  addOne(c(1,2))
+
+  addOne(x)
+  @
+  
+  Notice that \texttt{addOne} added 1 to every component of variable fed to it. If we just wanted to make a function that appends 1 to any other vector, we could do
+  
+  <<>>=
+  appendOne <- function(z) {
+    return(c(z,1))
+  }
+
+  appendOne(1)
+
+  appendOne(c(1,2))
+
+  appendOne(x)
+  
+  @
+  \item Making matrices and arrays in \R{} is only slightly more involved than making vectors:
+  <<>>=
+  A <- matrix(data=1:10, nrow=2, ncol=5)
+  B <- matrix(data=1:10, nrow=5, ncol=2)
+  
+  # note that, by default, R loads matrices column first!
+  A
+  B
+@
+ Always remember: \R{} considers a matrix just a fancy vector with pointers to column breaks. You can do most everything you could with a vector to a matrix and the results are what you'd expect:
+ <<>>=
+  A^2
+  @
+  \item Finally, there are times when you'll only want portions of a vector or matrix. The most straight-forward to do this extraction is like so:
+  <<>>=
+  x
+  x[1]
+  x[c(2,4)]
+  x[3:5]
+@
+With multidimensional objects like Matrices, you need to specify the coordinates of the subsection that you want. For example:
+<<>>=
+A
+
+# take the first element
+A[1,1]
+
+# take the first row
+A[1,]
+
+# take the third column
+A[,3]
+
+# take (1,1), (2,3), and (2,5) entries
+x.indices <- c(1,2,2) 
+y.indices <- c(1,3,5)
+indx <- matrix(c(x.indices,y.indices), ncol=2)
+indx
+A[indx]
+@
+\end{enumerate}
+
+\paragraph{A little less basic:}
+The power of \R{} isn't just in the fact that it's very ``vector friendly''. \R{} has a full, built-in suite of statistical functions to analyze your data (be it in the form of a vector, matrix, array, etc.). 
+
+For example, we know that a collection of data, $x_1, x_2, \ldots, x_{N}$ has mean given by
+\[
+  \overline{x}_{N} = \frac{1}{N} \sum_{i=1}^{N} x_i
+\]
+We could do this manually with \R{}:
+<<>>=
+x <- 1:100
+x.bar1 <- sum(x)/length(x)
+x.bar1
+@
+Or, we could just employ the \texttt{mean} function and have \R{} do all the dirty work:
+<<>>=
+x.bar2 <- mean(x)
+x.bar2
+@
+Similarly, if the data was a sample, we know that the (sample) variance is
+\[
+  S^2 = \frac{1}{N-1}\sum_{i=1}^{N}(x_i - \overline{x}_{N})^2
+\]
+And so while we could do this the long way, it turns out \R{} has a built-in function for this:
+<<>>=
+sample.var1 <- sum((x-mean(x))^2)/(length(x)-1)
+sample.var1
+
+sample.var2 <- var(x)
+sample.var2
+@
+Almost any, common, statistic that you'll encounter has been programmed as a function in \R{}. To look for it use \texttt{??} and your search phrase:
+<<>>=
+??covariance
+@
+If you know the name of the function, but need help retrieving the syntax details, or other specifics, use \texttt{?} followed by the function name. For example,
+<<>>=
+?var
+@
+Don't forget that google is your friend, and you shouldn't hesitate to consult it, or the \R{} help documents to get a handle on some pre-programmed function or programming problem.
+
+\paragraph{Generating random numbers:} Another selling point for \R{} is the ease in which one can generate random numbers according to various distributions. Table \ref{tab:rvs} gives a non-exhaustive list of distributions you can generate random variables from in \R{}. 
+
+\begin{table}[ht!]
+\centering
+  \begin{tabular}{c}
+  \hline
+  Beta($\alpha$,$\beta$) \\
+  Binomial($n$, $p$) \\
+  Cauchy($\ell$, $s$) \\
+  $\chi^{2}(\nu)$ \\
+  Exponential($\lambda$) \\
+  Gamma($\alpha$,$\lambda$) \\
+  Geometric($p$) \\
+  Hypergeometric($m$, $n$, $k$) \\
+  Normal($\mu$, $\sigma^2$) \\
+  Negative Binomial($n$, $p$) \\
+  Poisson($\lambda$) \\
+  Uniform($a$, $b$) \\
+  Weibull($\alpha$,$\beta$) \\
+  Wilcox($m$, $n$)\\
+  \hline
+  \end{tabular}
+\caption{examples of readily available distributions in \R{}}
+\label{tab:rvs}
+\end{table}
+
+The syntax for working with this distributions can be confusing at first, so let's just focus on generating numbers. Say, we want to randomly generate 10 numbers, uniformly, from between 0 and 1:
+<<>>=
+random.draw <- runif(n=10, min=0, max=1)
+random.draw
+@
+We can easily take a quick, numeric summary of this draw with \texttt{summary}:
+<<>>=
+summary(random.draw)
+@
+Or, we may want to look at some figures of the data:
+<<out.width="0.5\\textwidth",dev='pdf',fig.align='center'>>=
+boxplot(random.draw)
+# check out histogram, and density estimation
+hist(x=random.draw, breaks=seq(from=0, to=1, length.out=7))
+plot(density(random.draw, from=0, to=1))
+@
 \end{document}
