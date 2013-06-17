@@ -1,0 +1,8 @@
+\documentclass{article}
+
+\begin{document}
+
+This is the lab to be completed by Saturday, June 29, 01:00.
+
+
+\end{document}

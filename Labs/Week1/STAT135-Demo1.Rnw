@@ -1,0 +1,8 @@
+\documentclass{article}
+
+\begin{document}
+
+This is the Demo file for the first week
+
+
+\end{document}
