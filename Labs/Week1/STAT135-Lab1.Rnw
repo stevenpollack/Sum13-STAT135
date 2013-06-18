@@ -1,77 +1,82 @@
-\documentclass{article}
+\documentclass[12pt]{article}
+
+\usepackage{amsmath,amssymb,fancyhdr,palatino}
+\usepackage[textheight=8in,textwidth=6.5in]{geometry}
+
+\lhead{STAT 135}
+\chead{Lab \#1}
+\rhead{Survey Sampling}
+\cfoot{\thepage}
+
+\newcommand{\R}{\texttt{R}}
+\newcommand{\N}{\ensuremath{\mathcal{N}}}
+
+\DeclareMathOperator{\var}{var}
+
+\title{STAT 135 \\ Lab Assignment \#1}
+\author{}
+\date{Due 01:00, June 29, 2013}
 
 \begin{document}
-
-This is the lab to be completed by Saturday, June 29, 01:00.
-<<>>=
+\maketitle
+\pagestyle{fancy}
+<<globalParameters,echo=FALSE>>=
 set.seed(1234)
-N <- 10^6 # mess around with combinations of N and n to slow down convergence.
-sample.sizes <- c(12,70,100)
-alpha <- 0.33
-#population <- rpois(n=N,lambda=5) # mean is 5
-population2 <- rbeta(n=N,shape1=10,shape2=3) # mean is 10/13
-
-alphaLevelConfidenceInterval <- function(sample,alpha) {
-  z <- qnorm(p=alpha/2, lower.tail=F)
-  X.bar <- mean(sample)
-  n <- length(sample)
-  s2 <- (N-n)/(n*(n-1)*N) * sum((sample - X.bar)^2)
-  return( X.bar + c(-1,1)*z*sqrt(s2) )
-}
-
-collectSampleAndCalculateStats <- function(sample.size,population,alpha) {
-  ### sampling should be without replacement
-  rndm.sample <- sample(x=population,size=sample.size,replace=F)
-  sample.mean <- mean(rndm.sample)
-  sample.CI <- alphaLevelConfidenceInterval(rndm.sample,alpha)
-  return(c(sample.mean, sample.CI))
-}
-
-replicateSamplingProcedure <- function(sample.size, population, alpha) {
-  replicate(n=100,expr={collectSampleAndCalculateStats(sample.size,population,alpha)})  
-}
-
-analyzeReplicates <- function(replicates,mu,sample.size) {
-  ### mu is true value of mean
-  prop <- apply(X=replicates, MARGIN=2,
-                FUN=function(col){
-                  as.numeric(col[2] <= mu && mu <= col[3])
-                  })
-  
-  analysis.df <- data.frame(sample.mean=replicates[1,],
-                            lwr=replicates[2,],
-                            upr=replicates[3,],
-                            is.mu.covered=prop)
-  print(paste("Proportion of times CI's covered true mean when n =", sample.size, "is", mean(analysis.df$is.mu.covered)))
-  
-  with(data=analysis.df,expr={
-    hist(sample.mean,main=paste("Histogram of sampling distribution when n =", sample.size, "\n Red line indicates true mean \n Green line indicates distributional mean"))
-    abline(v=c(mu,mean(sample.mean)),col=c('red','green'))
-    
-    qqnorm((sample.mean-mean(sample.mean))/sd(sample.mean),main=paste("Q-Q plot of standard normal against sampling distribution \n with n =", sample.size))
-    abline(a=0,b=1,col='red')
-  })
-  
-  return(analysis.df)
-}
-
-runSimulation <- function(sample.sizes, population) {
-  tmp <- lapply(X=sample.sizes,
-                FUN=function(sample.size,pop){
-  replicates <- replicateSamplingProcedure(sample.size,pop,alpha)
-  analyzeReplicates(replicates,mean(pop),sample.size)
-},
-                pop=population)  
-}
-
-runSimulation(sample.sizes, population2)
-
-
-########################
-# out.df <- data.frame(X=1:length(out[1,]), LB=out[2,], UB=out[3,])
-# out.df <- transform(out.df, Y=(UB+LB)/2)
-# 
-# ggplot() + geom_linerange(data=out.df, aes(x=X,ymin=LB,ymax=UB,y=Y)) + geom_hline(yintercept=5)
+opts_chunk$set(comment="",tidy=F)
 @
+
+The purpose of this lab is to investigate the central limit theorem in the context of simple random sampling. Recall that the central limit theorem (CLT) states that for a sample, $X_1, X_2, \ldots, X_n$, of $n$ \textit{independent} and identically distributed (iid) random variables, their sample average starts resembling a Gaussian random variable as $n$ grows. Precisely,
+
+\[
+  \dfrac{\overline{X}_{n} - E(X_1)}{\sqrt{\var(X_1)/n}} \xrightarrow{D} \N(0,1), \quad \text{ as $n \to \infty$}
+\]
+
+While this is all well and good, when you're sampling data from a population, with replacement; when we perform simple random sampling, we're doing the sampling \textit{without} replacement. So, a priori, we shouldn't think that the CLT is a tool that we can use for analysis (e.g. to make confidence intervals). 
+
+However, like with most mathematical endeavors, just because a theorem doesn't look immediately utilizable, doesn't mean we can't use it. Your job is to pick a distribution from the many common ones listed in table \ref{tab:rvs} and perform the following analysis:
+
+\begin{enumerate}
+  \item Create a ``population'' of size $N$ ($N$ should be at least 100, but can be as big as you want). Give a numerical summary of your population, as well as a labeled histogram.
+  \item Choose three sample sizes, $n_1, n_2, n_3$, such that $5 \leq n_1 \leq 15 < n_2 < n_3 < N$.
+  \item For each $n_i$:
+  \begin{enumerate}
+    \item Take a simple random sample from your population, of size $n_i$.
+    \item Find the mean of the sample, and calculate a 53.25\% confidence interval for your point-estimate of the population mean.
+    \item Repeat steps 3.a and 3.b, $m$ times, where $m \geq 100$, and
+      \begin{enumerate}
+        \item Create a histogram of the sample means, properly labeled and annotated -- set a red line for the population mean, and green line for the mean of your sampling distribution.
+        \item Create a Q-Q plot comparing your standardized sampling distribution to that of a standard normal.
+        \item Note the number of times your (approximate) confidence intervals actually cover the population mean.
+      \end{enumerate}
+    \end{enumerate}
+\end{enumerate}
+
+\begin{table}[ht!]
+\centering
+  \begin{tabular}{c|c}
+  Distribution name (and parameters) & \R{} command for generation \\
+  \hline
+  Beta($\alpha$,$\beta$) & \texttt{rbeta(n, shape1, shape2)} \\
+  Binomial($k$, $p$) & \texttt{rbinom(n, size, prob)} \\
+  Cauchy($\ell$, $s$) & \texttt{rcauchy(n, location, scale)} \\
+  $\chi^{2}(\nu)$ & \texttt{rchisq(n, df)} \\
+  Exponential($\lambda$) & \texttt{rexp(n, rate)} \\
+  Gamma($\alpha$,$\lambda$) & \texttt{rgamma(n, shape, rate)} \\
+  Geometric($p$) & \texttt{rgeom(n, prob)} \\
+  Hypergeometric($m$, $n$, $k$) & \texttt{rhyper(nn, m, n, k)}\\
+  Negative Binomial($n$, $p$) & \texttt{rnbinom(n, size, prob, mu)}\\
+  Poisson($\lambda$) & \texttt{rpois(n, lambda)}\\
+  Uniform($a$, $b$) & \texttt{runif(n, min, max)} \\
+  Weibull($\alpha$,$\beta$) & \texttt{rweibull(n, shape, scale)} \\
+  Wilcox($m$, $n$) & \texttt{rwilcox(nn, m, n)} \\
+  \hline
+  \end{tabular}
+\caption{Choose any one of these distributions for your analysis}
+\label{tab:rvs}
+\end{table}
+
+Once you've gathered all your analyses, you are to write a report detailing your methodology, and results (including any figures and statistics). Reports may be submitted in .doc(x), .pdf, .odt, or any other reasonable digital format. Paper copies will not be accepted.
+
+This is the lab to be completed and submitted by Saturday, June 29, 01:00.
 
 \end{document}
