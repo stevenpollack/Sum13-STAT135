@@ -9,6 +9,9 @@
 \cfoot{\thepage}
 
 \newcommand{\R}{\texttt{R}}
+\newcommand{\N}{\ensuremath{\mathcal{N}}}
+
+\DeclareMathOperator{\var}{var}
 
 \begin{document}
 
@@ -187,4 +190,76 @@ boxplot(random.draw)
 hist(x=random.draw, breaks=seq(from=0, to=1, length.out=7))
 plot(density(random.draw, from=0, to=1))
 @
+
+\paragraph{(Simple) Random Sampling:} Finally, we arrive at the point of this demonstration: sampling! To sample, however, we should probably start with a pool of data.
+
+Let's suppose we're working a Quality Assurance job at a lightbulb factory, and management wants to revamp the packaging to let people know the lifespan of their bulbs. In a given week, the factory outputs one million ($10^6$) lightbulbs, so it's pretty clear experimenting on the whole population is out of the question (you're one man for god's sake!).
+
+If, for the sake of the argument, the lightbulbs' life spans followed an exponential distribution with mean life-time of three years, then we'd have a situation that looked like
+
+<<dev='pdf',out.width='0.5\\textwidth',fig.align='center'>>=
+population <- rexp(n=10^6, rate=1/3)
+
+summary(population)
+
+hist(population,
+     breaks=seq(from=0,to=ceiling(max(population)),length.out=20))
+@
+
+And taking a ten-bulb, (simple random) sample of the month's output can be done with \texttt{sample}, like so:
+
+<<>>=
+test.batch1 <- sample(x=population, size=10, replace=F)
+@
+
+We can take this batch back to the lab, and check out the distribution of the life span's directly:
+<<dev='pdf',out.width='0.5\\textwidth',fig.align='center'>>=
+test.batch1
+
+summary(test.batch1)
+
+hist(test.batch1,
+     breaks=seq(from=0,to=ceiling(max(test.batch1)),by=1))
+@
+
+However, our bosses aren't sure how confident they should be in your point estimate. In particular, they don't think writing ``Expected life span of \Sexpr{mean(test.batch1)}!'' makes for chic packaging. So, you might be interested in approximating a confidence interval for them, and you recall (from section 7.3.3, in your copy of Rice) the Central Limit Theorem: for $X_1, X_2, \ldots, X_n$ independent, identically distributed random variables from some distribution,
+\[
+\dfrac{ \overline{X}_{n} - E(X_1) }{\sigma_{\overline{X}_n}} \approx \N(\mu=0,\sigma=1)
+\]
+where $\sigma_{\overline{X}_n}$ is the standard error of our sample mean. However, 
+\[
+\sigma^2_{\overline{X}_n} = \dfrac{\var(X_1)}{n}\left(\dfrac{N-n}{N-1}\right)
+\]
+which relies on the population variance! Since we don't know it, we estimate it with $s^2_{\overline{X}_n}$, given by
+\[
+  s^2_{\overline{X}_n} = \frac{N-n}{n(n-1)N}\sum_{i=1}^{n}\left(X_i - \overline{X}_n\right)^2
+\]
+
+While all this may seem confusing, it all boils down to the following: a 95\% confidence interval for the mean life span is
+\[
+\left( \overline{X}_{n} - z_{0.025} s_{\overline{X}_n}, \overline{X}_{n} + z_{0.025} s_{\overline{X}_n} \right)
+\]
+where $z_{0.025}$ is the value such that for standard normal random variate, $Z$,
+\[
+P(Z > z_{0.025}) = 2.5\%
+\]
+
+What does this mean for your bosses? Let's calculate our confidence interval and find out:
+<<>>=
+n <- 10; N <- 10^6
+
+X.bar <- mean(test.batch1)
+
+s2 <- (N-n)/(n*(n-1)*N)*sum((test.batch1 - X.bar)^2)
+
+z <- qnorm(p=0.025, lower.tail=F)
+
+confidence.int <- X.bar + c(-1,1)*z*sqrt(s2)
+confidence.int
+@
+
+Turns out, this confidence interval is pretty wide. Infact, its half-length is \Sexpr{(confidence.int[2]-confidence.int[1])/2}. But, that's okay: management (being what it is) has decided that they'll market the bulbs as having a 2.5 year life span, and let consumers be pleasantly surprised when their bulbs last a bit longer.
+
+In the lab assignment to come, you'll investigate the central limit theorem, as well as the effect of sample size (relative to population size) on the quality of your predictions.
+
 \end{document}
