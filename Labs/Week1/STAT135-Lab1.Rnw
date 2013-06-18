@@ -3,6 +3,75 @@
 \begin{document}
 
 This is the lab to be completed by Saturday, June 29, 01:00.
+<<>>=
+set.seed(1234)
+N <- 10^6 # mess around with combinations of N and n to slow down convergence.
+sample.sizes <- c(12,70,100)
+alpha <- 0.33
+#population <- rpois(n=N,lambda=5) # mean is 5
+population2 <- rbeta(n=N,shape1=10,shape2=3) # mean is 10/13
 
+alphaLevelConfidenceInterval <- function(sample,alpha) {
+  z <- qnorm(p=alpha/2, lower.tail=F)
+  X.bar <- mean(sample)
+  n <- length(sample)
+  s2 <- (N-n)/(n*(n-1)*N) * sum((sample - X.bar)^2)
+  return( X.bar + c(-1,1)*z*sqrt(s2) )
+}
+
+collectSampleAndCalculateStats <- function(sample.size,population,alpha) {
+  ### sampling should be without replacement
+  rndm.sample <- sample(x=population,size=sample.size,replace=F)
+  sample.mean <- mean(rndm.sample)
+  sample.CI <- alphaLevelConfidenceInterval(rndm.sample,alpha)
+  return(c(sample.mean, sample.CI))
+}
+
+replicateSamplingProcedure <- function(sample.size, population, alpha) {
+  replicate(n=100,expr={collectSampleAndCalculateStats(sample.size,population,alpha)})  
+}
+
+analyzeReplicates <- function(replicates,mu,sample.size) {
+  ### mu is true value of mean
+  prop <- apply(X=replicates, MARGIN=2,
+                FUN=function(col){
+                  as.numeric(col[2] <= mu && mu <= col[3])
+                  })
+  
+  analysis.df <- data.frame(sample.mean=replicates[1,],
+                            lwr=replicates[2,],
+                            upr=replicates[3,],
+                            is.mu.covered=prop)
+  print(paste("Proportion of times CI's covered true mean when n =", sample.size, "is", mean(analysis.df$is.mu.covered)))
+  
+  with(data=analysis.df,expr={
+    hist(sample.mean,main=paste("Histogram of sampling distribution when n =", sample.size, "\n Red line indicates true mean \n Green line indicates distributional mean"))
+    abline(v=c(mu,mean(sample.mean)),col=c('red','green'))
+    
+    qqnorm((sample.mean-mean(sample.mean))/sd(sample.mean),main=paste("Q-Q plot of standard normal against sampling distribution \n with n =", sample.size))
+    abline(a=0,b=1,col='red')
+  })
+  
+  return(analysis.df)
+}
+
+runSimulation <- function(sample.sizes, population) {
+  tmp <- lapply(X=sample.sizes,
+                FUN=function(sample.size,pop){
+  replicates <- replicateSamplingProcedure(sample.size,pop,alpha)
+  analyzeReplicates(replicates,mean(pop),sample.size)
+},
+                pop=population)  
+}
+
+runSimulation(sample.sizes, population2)
+
+
+########################
+# out.df <- data.frame(X=1:length(out[1,]), LB=out[2,], UB=out[3,])
+# out.df <- transform(out.df, Y=(UB+LB)/2)
+# 
+# ggplot() + geom_linerange(data=out.df, aes(x=X,ymin=LB,ymax=UB,y=Y)) + geom_hline(yintercept=5)
+@
 
 \end{document}
