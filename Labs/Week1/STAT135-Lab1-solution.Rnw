@@ -1,15 +1,67 @@
-\documentclass{article}
+\documentclass[12pt]{article}
+
+\usepackage{amsmath,amssymb,fancyhdr,palatino}
+\usepackage[textheight=8in,textwidth=6.5in]{geometry}
+
+%%%%% knitr code to make sure things stay inside listings box:
+\usepackage{listings}
+\usepackage{inconsolata}
+
+% # <<stayInside,eval=FALSE,echo=FALSE>>=
+% #   options(width=60)
+% # 
+% #   listing <- function(x, options) {
+% #     paste("\\begin{lstlisting}[basicstyle=\\ttfamily,breaklines=true]\n",
+% #           x,"\\end{lstlisting}\n", sep = "")
+% #   }
+% #   knit_hooks$set(source=listing, output=listing)
+% # @
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\lhead{STAT 135}
+\chead{Lab \#1 -- Sample Report}
+\rhead{Survey Sampling}
+\cfoot{\thepage}
+
+\newcommand{\R}{\texttt{R}}
+\newcommand{\N}{\ensuremath{\mathcal{N}}}
+
+\DeclareMathOperator{\var}{var}
+
+\title{STAT 135 \\ Lab Assignment \#1}
+\author{Sample Report}
+\date{}
 
 \begin{document}
+\maketitle
+\pagestyle{fancy}
 
-This is the lab to be completed by Saturday, June 29, 01:00.
-<<>>=
+<<globalParameters,echo=FALSE>>=
 set.seed(1234)
-N <- 10^6 # mess around with combinations of N and n to slow down convergence.
+opts_chunk$set(comment=NA,tidy=F)
+@
+
+\section{Introduction:} The central limit theorem, in its simplest of forms, concerns itself with iid, finite samples. However, when performing survey sampling (and hence, simple random sampling), the sample data may be indentically distributed, but it is all but independent. This leads to the natural question, how necessary is independence, in the hypotheses of the central limit theorem? In particular, can a survey sample exhibit the same ``central limit''-type behavior as the typical, iid sample?
+
+<<setup,eval=TRUE>>=
+set.seed(1234)
+N <- 300 
 sample.sizes <- c(12,70,100)
-alpha <- 0.33
-#population <- rpois(n=N,lambda=5) # mean is 5
-population2 <- rbeta(n=N,shape1=10,shape2=3) # mean is 10/13
+
+# an alpha-% CI needs to be calculated with level=(1-alpha)
+alpha <- 1-0.5325
+
+population <- rchisq(n=N, df=4) # mean is 10/13
+@
+
+\section{Methodology:} To investigate whether survey samples exhibit any "central limit"-type behavior, a simulation study was conducted with a pool of $N=\Sexpr{N}$ random variables, all independent and identically distributed according to a $\chi^2_{4}$ distribution. From this pool, samples of size $\Sexpr{paste(sample.sizes,collapse=",")}$ were taken, and the sampling distribution of the mean for each size was compared to that of the standard normal distribution. Assuming the central limit theorem, approximate 53.25\% confidence intervals (and their true coverage) were calculated. The code for the calculations is provided in the Appendix, and the resulting figures and statistics can be found in the Results section.
+
+<<simulationCode,eval=T,fig.keep='none',echo=FALSE>>=
+### program outline:
+### 1. create function to calculate alpha-% CI from a sample
+### 2. automate sampling and stat calculation step
+### 3. replicate step 2
+### 4. repeat steps 2 and 3 for all sample sizes
 
 alphaLevelConfidenceInterval <- function(sample,alpha) {
   z <- qnorm(p=alpha/2, lower.tail=F)
@@ -20,7 +72,14 @@ alphaLevelConfidenceInterval <- function(sample,alpha) {
 }
 
 collectSampleAndCalculateStats <- function(sample.size,population,alpha) {
-  ### sampling should be without replacement
+  ### automates sampling from population for a given
+  ### sample.size and population. Then, calculates
+  ### sample mean and alpha-% CI using central limit
+  ### theorem...
+  ### output is a vector of length=3:
+  ### output[1] = sample mean
+  ### output[2:3] = calculated CI
+  
   rndm.sample <- sample(x=population,size=sample.size,replace=F)
   sample.mean <- mean(rndm.sample)
   sample.CI <- alphaLevelConfidenceInterval(rndm.sample,alpha)
@@ -28,50 +87,123 @@ collectSampleAndCalculateStats <- function(sample.size,population,alpha) {
 }
 
 replicateSamplingProcedure <- function(sample.size, population, alpha) {
-  replicate(n=100,expr={collectSampleAndCalculateStats(sample.size,population,alpha)})  
+  ### just a fancy wrapper for R's replicate function
+  ### use a replication factor of n=100 to estimate
+  ### sampling distribution
+  replicate(n=100,
+            expr={
+              collectSampleAndCalculateStats(sample.size,
+                                             population,
+                                             alpha)
+              })  
 }
 
-analyzeReplicates <- function(replicates,mu,sample.size) {
-  ### mu is true value of mean
-  prop <- apply(X=replicates, MARGIN=2,
-                FUN=function(col){
-                  as.numeric(col[2] <= mu && mu <= col[3])
-                  })
+analyzeReplicates <- function(replicates, mu, sample.size) {
+  ### this function takes the output of 
+  ### replicateSamplingProcedure (3x100 matrix)
+  ### and 
+  ### 1. checks which of the 100 CI's actually
+  ###    contain mu
+  ### 2. produces histograms and Q-Q plots of 
+  ###    sampling distribution
+  ### Note that input parameter mu is assumed
+  ### to be population mean
+  ###
+  ### For thoroughness, function returns
+  ### proportion of CI's that cover mu
   
-  analysis.df <- data.frame(sample.mean=replicates[1,],
-                            lwr=replicates[2,],
-                            upr=replicates[3,],
-                            is.mu.covered=prop)
-  print(paste("Proportion of times CI's covered true mean when n =", sample.size, "is", mean(analysis.df$is.mu.covered)))
+  prop <- apply(X=replicates, MARGIN=2, FUN=function(col){ as.numeric(col[2] <= mu && mu <= col[3]) })
   
-  with(data=analysis.df,expr={
-    hist(sample.mean,main=paste("Histogram of sampling distribution when n =", sample.size, "\n Red line indicates true mean \n Green line indicates distributional mean"))
-    abline(v=c(mu,mean(sample.mean)),col=c('red','green'))
-    
-    qqnorm((sample.mean-mean(sample.mean))/sd(sample.mean),main=paste("Q-Q plot of standard normal against sampling distribution \n with n =", sample.size))
-    abline(a=0,b=1,col='red')
-  })
+  analysis.df <- data.frame(sample.mean=replicates[1,], lwr=replicates[2,], upr=replicates[3,], is.mu.covered=prop)
   
-  return(analysis.df)
+  with(analysis.df, {hist(sample.mean, main=paste("Histogram of sampling distribution when n =", sample.size, "\n Red line indicates true mean \n Green line indicates distributional mean"))
+        
+  abline(v=c(mu,mean(sample.mean)),col=c('red','green'))})
+  
+  std.sample.mean <- with(data=analysis.df,expr={(sample.mean-mean(sample.mean))/sd(sample.mean)})
+        
+  qqnorm(std.sample.mean, main=paste("Q-Q plot of standard normal against sampling distribution \n with n =", sample.size))
+  abline(a=0,b=1,col="red")
+
+  return(mean(prop))
 }
 
-runSimulation <- function(sample.sizes, population) {
-  tmp <- lapply(X=sample.sizes,
-                FUN=function(sample.size,pop){
+runSimulation <- function(sample.sizes, population, alpha) {
+  ### simple wrapper putting all of our
+  ### helper functions together;
+  ### It will produce the analysis for each value in
+  ### sample.sizes and output coverages
+  out <- lapply(X=sample.sizes,
+                FUN=function(sample.size, pop){
   replicates <- replicateSamplingProcedure(sample.size,pop,alpha)
   analyzeReplicates(replicates,mean(pop),sample.size)
 },
-                pop=population)  
+                pop=population)
+  return(unlist(out))
 }
 
-runSimulation(sample.sizes, population2)
+coverages <- runSimulation(sample.sizes, population, alpha)
 
+coverage.analysis <- data.frame("Sample Size"=sample.sizes,"Coverage"=coverages)
+# print(paste("Proportion of times CI's covered true mean when n =", sample.sizes, "is", coverages))
+@
+
+\section{Results:}
+
+\begin{figure}[ht!]
+  \centering
+  \includegraphics[width=0.45\textwidth]{./figure/simulationCode1.pdf}
+  \includegraphics[width=0.45\textwidth]{./figure/simulationCode2.pdf}
+  \caption{Histogram and Q-Q plot for $n = \Sexpr{sample.sizes[1]}$}
+  \label{fig:anal1}
+\end{figure}
+
+\begin{figure}[ht!]
+  \centering
+  \includegraphics[width=0.45\textwidth]{./figure/simulationCode3.pdf}
+  \includegraphics[width=0.45\textwidth]{./figure/simulationCode4.pdf}
+  \caption{Histogram and Q-Q plot for $n = \Sexpr{sample.sizes[2]}$}
+  \label{fig:anal2}
+\end{figure}
+
+\begin{figure}[ht!]
+  \centering
+  \includegraphics[width=0.45\textwidth]{./figure/simulationCode5.pdf}
+  \includegraphics[width=0.45\textwidth]{./figure/simulationCode6.pdf}
+  \caption{Histogram and Q-Q plot for $n = \Sexpr{sample.sizes[3]}$}
+  \label{fig:anal3}
+\end{figure}
+
+<<coverageTable,echo=FALSE,results='asis'>>=
+library(xtable)
+colnames(coverage.analysis) <- c("Sample Size", "Coverage")
+print(xtable(coverage.analysis,digits=c(2,0,2),caption="Coverage of confidence intervals for the various sample sizes.",align="lc|c"),include.rownames=F)
+@
+
+The table of coverages for specific sample sizes tells the most evocative story: initially the sample size is too small, and therefore the coverage is less than we were anticipating. As $n$ grows, however, we see the coverage stabilizing around it's intended value.
+
+\section{Conclusion:} Despite not being equiped with a simple random sample version of the CLT, it's clear that if the sample size is large enough (and thus, if the population size isn't too small), the sampling distribution of a survey sample's mean can start to exhibit normal behaviour.
+
+\section{Appendix:}
+<<stayInside,echo=FALSE>>=
+  options(width=60)
+  listing <- function(x, options) {
+     paste("\\begin{lstlisting}[basicstyle=\\ttfamily,breaklines=true]\n", x,"\\end{lstlisting}\n", sep = "")
+  }
+  
+  knit_hooks$set(source=listing, output=listing)
+@
+
+<<refChunk,ref.label="simulationCode",eval=FALSE,highlight=F>>=
+@
+\end{document}
+
+<<echo=FALSE,eval=FALSE>>=
 
 ########################
 # out.df <- data.frame(X=1:length(out[1,]), LB=out[2,], UB=out[3,])
 # out.df <- transform(out.df, Y=(UB+LB)/2)
 # 
 # ggplot() + geom_linerange(data=out.df, aes(x=X,ymin=LB,ymax=UB,y=Y)) + geom_hline(yintercept=5)
-@
 
-\end{document}
+@

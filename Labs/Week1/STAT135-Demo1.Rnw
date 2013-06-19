@@ -138,7 +138,7 @@ sample.var1
 sample.var2 <- var(x)
 sample.var2
 @
-Almost any, common, statistic that you'll encounter has been programmed as a function in \R{}. To look for it use \texttt{??} and your search phrase:
+Almost any common statistic that you'll encounter has been programmed as a function in \R{}. To look for it use \texttt{??} and your search phrase:
 <<>>=
 ??covariance
 @
@@ -193,7 +193,7 @@ plot(density(random.draw, from=0, to=1))
 
 \paragraph{(Simple) Random Sampling:} Finally, we arrive at the point of this demonstration: sampling! To sample, however, we should probably start with a pool of data.
 
-Let's suppose we're working a Quality Assurance job at a lightbulb factory, and management wants to revamp the packaging to let people know the lifespan of their bulbs. In a given week, the factory outputs one million ($10^6$) lightbulbs, so it's pretty clear experimenting on the whole population is out of the question (you're one man for god's sake!).
+Let's suppose we're working a Quality Assurance job at a lightbulb factory, and management wants to revamp the packaging to let people know the lifespan of their bulbs. In a given week, the factory outputs one million ($10^6$) lightbulbs, so it's pretty clear experimenting on the whole population is out of the question (you're one person for god's sake!).
 
 If, for the sake of the argument, the lightbulbs' life spans followed an exponential distribution with mean life-time of three years, then we'd have a situation that looked like
 
@@ -224,7 +224,7 @@ hist(test.batch1,
 
 However, our bosses aren't sure how confident they should be in your point estimate. In particular, they don't think writing ``Expected life span of \Sexpr{mean(test.batch1)}!'' makes for chic packaging. So, you might be interested in approximating a confidence interval for them, and you recall (from section 7.3.3, in your copy of Rice) the Central Limit Theorem: for $X_1, X_2, \ldots, X_n$ independent, identically distributed random variables from some distribution,
 \[
-\dfrac{ \overline{X}_{n} - E(X_1) }{\sigma_{\overline{X}_n}} \approx \N(\mu=0,\sigma=1)
+\dfrac{ \overline{X}_{n} - E(X_1) }{\sigma_{\overline{X}_n}} \stackrel{approx}{\sim} \N(\mu=0,\sigma=1)
 \]
 where $\sigma_{\overline{X}_n}$ is the standard error of our sample mean. However, 
 \[
