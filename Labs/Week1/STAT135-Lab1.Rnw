@@ -15,7 +15,7 @@
 
 \title{STAT 135 \\ Lab Assignment \#1}
 \author{}
-\date{Due 01:00, June 29, 2013}
+\date{Due 22:00, June 28, 2013}
 
 \begin{document}
 \maketitle
@@ -25,31 +25,19 @@ set.seed(1234)
 opts_chunk$set(comment="",tidy=F)
 @
 
-The purpose of this lab is to investigate the central limit theorem in the context of simple random sampling. Recall that the central limit theorem (CLT) states that for a sample, $X_1, X_2, \ldots, X_n$, of $n$ \textit{independent} and identically distributed (iid) random variables, their sample average starts resembling a Gaussian random variable as $n$ grows. Precisely,
+The purpose of this lab is to investigate the central limit theorem in the context of simple random sampling. Recall, the most common form of the central limit theorem (CLT) states that for a sample, $X_1, X_2, \ldots, X_n$, of $n$ \textit{independent} and identically distributed (iid) random variables, their sample average starts resembling a Gaussian random variable as $n$ grows. Precisely,
 
 \[
   \dfrac{\overline{X}_{n} - E(X_1)}{\sqrt{\var(X_1)/n}} \xrightarrow{D} \N(0,1), \quad \text{ as $n \to \infty$}
 \]
 
-While this is all well and good, when you're sampling data from a population, with replacement; when we perform simple random sampling, we're doing the sampling \textit{without} replacement. So, a priori, we shouldn't think that the CLT is a tool that we can use for analysis (e.g. to make confidence intervals). 
+This is all well and good, when you're sampling data from a population, with replacement; when we perform simple random sampling, we're doing the sampling \textit{without} replacement. So this form of the CLT won't do. However, as Rice alludes in \S 7.3, there is a version of the CLT when performing survey sampling:
 
-However, like with most mathematical endeavors, just because a theorem doesn't look immediately utilizable, doesn't mean we can't use it. Your job is to pick a distribution from the many common ones listed in table \ref{tab:rvs} and perform the following analysis:
+\begin{quote}
+But other central limit theorems have been proved that are appropriate to the sampling context. These show that if $n$ is large, but still small relative to $N$, then $\overline{X}_n$, the mean of a simple random sample, is approximately normally distributed.
+\end{quote}
 
-\begin{enumerate}
-  \item Create a ``population'' of size $N$ ($N$ should be at least 100, but can be as big as you want). Give a numerical summary of your population, as well as a labeled histogram.
-  \item Choose three sample sizes, $n_1, n_2, n_3$, such that $5 \leq n_1 \leq 15 < n_2 < n_3 < N$.
-  \item For each $n_i$:
-  \begin{enumerate}
-    \item Take a simple random sample from your population, of size $n_i$.
-    \item Find the mean of the sample, and calculate a 53.25\% confidence interval for your point-estimate of the population mean.
-    \item Repeat steps 3.a and 3.b, $m$ times, where $m \geq 100$, and
-      \begin{enumerate}
-        \item Create a histogram of the sample means, properly labeled and annotated -- set a red line for the population mean, and green line for the mean of your sampling distribution.
-        \item Create a Q-Q plot comparing your standardized sampling distribution to that of a standard normal.
-        \item Note the number of times your (approximate) confidence intervals actually cover the population mean.
-      \end{enumerate}
-    \end{enumerate}
-\end{enumerate}
+This is reassuring, but you're now led to the question, ``how small should $n/N$ be so that the theorem still works?''. To answer this question, you'll do a simulation study that uses an artificial data set, as well as a real-life data set. The artifical data set will be one you make yourself by picking a distribution from the many common ones listed in table \ref{tab:rvs}, and generating 1000 random numbers from that generation. The real-life data can be downloaded from the Piazza course-webpage's ``Resources'' section (it's called \texttt{1000moms.txt}, under Data sets).
 
 \begin{table}[ht!]
 \centering
@@ -75,8 +63,27 @@ However, like with most mathematical endeavors, just because a theorem doesn't l
 \label{tab:rvs}
 \end{table}
 
+Armed with these two data sets, you'll perform the following analysis:
+
+\begin{enumerate}
+  \item Choose a variable (column) from \texttt{1000moms.txt} as your real-life data, and numerical summaries of both of your data sets, as well as a labeled histograms.
+  \item Choose three sample sizes, $n_1, n_2, n_3$, such that $5 \leq n_1 \leq 15 < n_2 < 750 \leq n_3 < 1000$. 
+  \item For each $n_i$:
+  \begin{enumerate}
+    \item Take a simple random sample from your data sets, of size $n_i$.
+    \item Find the mean of the samples, and calculate a 53.25\% confidence interval for your point-estimate of the population means.
+    \item Repeat steps 3.a and 3.b, $m$ times, where $m \geq 100$, and
+      \begin{enumerate}
+        \item Create a histogram of the sample means, properly labeled and annotated -- set a red line for the population mean, and green line for the mean of your sampling distribution.
+        \item Create a Q-Q plot comparing your standardized sampling distribution to that of a standard normal.
+        \item Note the number of times your (approximate) confidence intervals actually cover the population means.
+      \end{enumerate}
+    \end{enumerate}
+\end{enumerate}
+
+
 Once you've gathered all your analyses, you are to write a report detailing your methodology, and results (including any figures and statistics). Reports may be submitted in .doc(x), .pdf, .odt, or any other reasonable digital format. Paper copies will not be accepted.
 
-This is the lab to be completed and submitted by Saturday, June 29, 01:00.
+This is the lab to be completed and submitted by Friday, June 28, 22:00.
 
 \end{document}
