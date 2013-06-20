@@ -38,25 +38,33 @@
 
 <<globalParameters,echo=FALSE>>=
 set.seed(1234)
-opts_chunk$set(comment=NA,tidy=F)
+opts_chunk$set(comment=NA,tidy=F,warning=FALSE,message=FALSE)
 @
 
-\section{Introduction:} The central limit theorem, in its simplest of forms, concerns itself with iid, finite samples. However, when performing survey sampling (and hence, simple random sampling), the sample data may be indentically distributed, but it is all but independent. This leads to the natural question, how necessary is independence, in the hypotheses of the central limit theorem? In particular, can a survey sample exhibit the same ``central limit''-type behavior as the typical, iid sample?
+\section{Introduction:} In John Rice's textbook, \textit{Mathematical Statistics and Data Analysis}, a guideline for central limit theorem-type behaviour is described for simple random samples. The guideline is, 
+
+\begin{quote}
+... if [the sample size] is large, but still small relative to [the population size], then $\overline{X}_n$, the mean of a simple random sample, is approximately normally distributed.
+\end{quote}
+
+However, this guideline leaves much to be interpreted. For instance, how ``small'' can the ratio of sample size : population size be, before it is too big? This report outlines a simulation study performed on two data sets (one artificial, and one real) which surveys acceptable ranges for the size of this ratio.
 
 <<setup,eval=TRUE>>=
 set.seed(1234)
-N <- 300 
-sample.sizes <- c(12,70,100)
+N <- 1000 
+sample.sizes <- c(12,400,800)
 
 # an alpha-% CI needs to be calculated with level=(1-alpha)
 alpha <- 1-0.5325
 
-population <- rchisq(n=N, df=4) # mean is 10/13
+artificial.data <- rchisq(n=N, df=4)
+moms.data <- read.table(file="../../Past_Labs/data/1000moms.txt", header=T)
+real.data <- moms.data[,2] # choose to work with "numkids"
 @
 
-\section{Methodology:} To investigate whether survey samples exhibit any "central limit"-type behavior, a simulation study was conducted with a pool of $N=\Sexpr{N}$ random variables, all independent and identically distributed according to a $\chi^2_{4}$ distribution. From this pool, samples of size $\Sexpr{paste(sample.sizes,collapse=",")}$ were taken, and the sampling distribution of the mean for each size was compared to that of the standard normal distribution. Assuming the central limit theorem, approximate 53.25\% confidence intervals (and their true coverage) were calculated. The code for the calculations is provided in the Appendix, and the resulting figures and statistics can be found in the Results section.
+\section{Methodology:} Since the real-life data set (taken to be the \texttt{numkids} column in the file, \texttt{1000moms.txt}) had 1000 entries, a population of 1000 randomly generated $\chi^2_{4}$ random variables was created as an artificial analogue to this set. To determine how big or small the ratio of sample size to population size should be, before the sampling distribution of the mean stops being well-approximated by a Gaussian random variable, three sample sizes were chosen: $n = \Sexpr{paste(sample.sizes,collapse=",")}$. Within each sample size, and for each data set, the sampling distribution of the mean was estimated (through 10000 replications), and its standardized distribution was compared in a Q-Q plot to that of a standard normal. Atop of that, approximate 53.25\% confidence intervals were calculated, assuming the central limit theorem, and their true coverage was determined. The code for the calculations is provided in the Appendix, and the resulting figures and statistics can be found in the Results section.
 
-<<simulationCode,eval=T,fig.keep='none',echo=FALSE>>=
+<<simulationCode,eval=T,fig.keep='all',echo=FALSE>>=
 ### program outline:
 ### 1. create function to calculate alpha-% CI from a sample
 ### 2. automate sampling and stat calculation step
@@ -90,7 +98,7 @@ replicateSamplingProcedure <- function(sample.size, population, alpha) {
   ### just a fancy wrapper for R's replicate function
   ### use a replication factor of n=100 to estimate
   ### sampling distribution
-  replicate(n=100,
+  replicate(n=10000,
             expr={
               collectSampleAndCalculateStats(sample.size,
                                              population,
@@ -110,22 +118,28 @@ analyzeReplicates <- function(replicates, mu, sample.size) {
   ### to be population mean
   ###
   ### For thoroughness, function returns
-  ### proportion of CI's that cover mu
+  ### both graphics objects, and the coverage
+  
+  require(ggplot2) # load ggplot2 package
   
   prop <- apply(X=replicates, MARGIN=2, FUN=function(col){ as.numeric(col[2] <= mu && mu <= col[3]) })
   
   analysis.df <- data.frame(sample.mean=replicates[1,], lwr=replicates[2,], upr=replicates[3,], is.mu.covered=prop)
   
-  with(analysis.df, {hist(sample.mean, main=paste("Histogram of sampling distribution when n =", sample.size, "\n Red line indicates true mean \n Green line indicates distributional mean"))
-        
-  abline(v=c(mu,mean(sample.mean)),col=c('red','green'))})
+  hist.obj <- ggplot(data=analysis.df) + geom_histogram(aes(x=sample.mean)) + geom_vline(aes(xintercept=mean(sample.mean)), colour='blue',alpha=0.5,size=1) + geom_vline(xintercept=mu,colour='red',alpha=0.5,size=1) + labs(list(title=paste("Histogram of sampling distribution when n =", sample.size, "\n Red line indicates true mean \n Blue line indicates distributional mean"), x="Sample mean"))
   
-  std.sample.mean <- with(data=analysis.df,expr={(sample.mean-mean(sample.mean))/sd(sample.mean)})
+#   with(analysis.df, {hist(sample.mean, main=)
+#         
+#   abline(v=c(mu,mean(sample.mean)),col=c('red','green'))})
+  
+  analysis.df <- transform(analysis.df,std.sample.mean=(sample.mean-mean(sample.mean))/sd(sample.mean))
+  
+  qqplot.obj <- ggplot(data=analysis.df) + stat_qq(aes(sample=std.sample.mean)) + geom_abline(slope=1,intercept=0,colour='red') + labs(title=paste("Q-Q plot of standardized sampling distribution against standard normal \n with n =", sample.size))
         
-  qqnorm(std.sample.mean, main=paste("Q-Q plot of standard normal against sampling distribution \n with n =", sample.size))
-  abline(a=0,b=1,col="red")
+#   qqnorm(std.sample.mean, main=)
+#   abline(a=0,b=1,col="red")
 
-  return(mean(prop))
+  return(list(hist=hist.obj,qqplot=qqplot.obj,coverage=mean(prop)))
 }
 
 runSimulation <- function(sample.sizes, population, alpha) {
@@ -133,58 +147,68 @@ runSimulation <- function(sample.sizes, population, alpha) {
   ### helper functions together;
   ### It will produce the analysis for each value in
   ### sample.sizes and output coverages
-  out <- lapply(X=sample.sizes,
+  lapply(X=sample.sizes,
                 FUN=function(sample.size, pop){
   replicates <- replicateSamplingProcedure(sample.size,pop,alpha)
   analyzeReplicates(replicates,mean(pop),sample.size)
 },
                 pop=population)
-  return(unlist(out))
 }
 
-coverages <- runSimulation(sample.sizes, population, alpha)
+artificial.data.results <- runSimulation(sample.sizes, artificial.data, alpha)
+real.data.results <- runSimulation(sample.sizes, real.data, alpha)
 
-coverage.analysis <- data.frame("Sample Size"=sample.sizes,"Coverage"=coverages)
-# print(paste("Proportion of times CI's covered true mean when n =", sample.sizes, "is", coverages))
+coverage.analysis <- data.frame(sample.sizes)
+coverage.analysis <- within(coverage.analysis,expr={
+  artificial.coverages <- unlist(lapply(X=artificial.data.results,FUN=function(results){results$coverage}))
+  real.data.coverages <- unlist(lapply(X=real.data.results,FUN=function(results){results$coverage}))
+})
 @
 
 \section{Results:}
 
-\begin{figure}[ht!]
-  \centering
-  \includegraphics[width=0.45\textwidth]{./figure/simulationCode1.pdf}
-  \includegraphics[width=0.45\textwidth]{./figure/simulationCode2.pdf}
-  \caption{Histogram and Q-Q plot for $n = \Sexpr{sample.sizes[1]}$}
-  \label{fig:anal1}
-\end{figure}
+Figures 1, 2 and 3 display the histograms and Q-Q plots for the sampling distribution of $\overline{X}_n$, when the sampling from the artificial data set, and varying the sample size between $n= \Sexpr{paste(sample.sizes,collapse=",")}$. Similarly, figures 4, 5 and 6 display the histograms when sampling from the \texttt{numkids} column in the \texttt{1000moms.txt} data set. Finally, table 1 displays the coverage probabilities for our approximate confidence intervals.
 
-\begin{figure}[ht!]
-  \centering
-  \includegraphics[width=0.45\textwidth]{./figure/simulationCode3.pdf}
-  \includegraphics[width=0.45\textwidth]{./figure/simulationCode4.pdf}
-  \caption{Histogram and Q-Q plot for $n = \Sexpr{sample.sizes[2]}$}
-  \label{fig:anal2}
-\end{figure}
 
-\begin{figure}[ht!]
-  \centering
-  \includegraphics[width=0.45\textwidth]{./figure/simulationCode5.pdf}
-  \includegraphics[width=0.45\textwidth]{./figure/simulationCode6.pdf}
-  \caption{Histogram and Q-Q plot for $n = \Sexpr{sample.sizes[3]}$}
-  \label{fig:anal3}
-\end{figure}
+<<artificialData1,dev='pdf',fig.align='center',fig.show='hold',out.width="0.47\\textwidth",fig.cap=paste("Histogram and Q-Q plot for sampling distribution of $\\overline{X}_n$, on artificial data set when $n$ =", sample.sizes[1]),echo=FALSE,fig.pos="ht!",results='hide'>>=
+artificial.data.results[[1]]
+@
+
+<<artificialData2,dev='pdf',fig.align='center',fig.show='hold',out.width="0.47\\textwidth",fig.cap=paste("Histogram and Q-Q plot for sampling distribution of $\\overline{X}_n$, on artificial data set when $n$ =", sample.sizes[2]),echo=FALSE,fig.pos="ht!",results='hide'>>=
+artificial.data.results[[2]]
+@
+
+<<artificialData3,dev='pdf',fig.align='center',fig.show='hold',out.width="0.47\\textwidth",fig.cap=paste("Histogram and Q-Q plot for sampling distribution of $\\overline{X}_n$, on artificial data set when $n$ =", sample.sizes[3]),echo=FALSE,fig.pos="ht!",results='hide'>>=
+artificial.data.results[[3]]
+@
+
+<<realData1,dev='pdf',fig.align='center',fig.show='hold',out.width="0.47\\textwidth",fig.cap=paste("Histogram and Q-Q plot for sampling distribution of $\\overline{X}_n$, on real-life data set when $n$ =", sample.sizes[1]),echo=FALSE,fig.pos="ht!",results='hide'>>=
+real.data.results[[1]]
+@
+
+<<realData2,dev='pdf',fig.align='center',fig.show='hold',out.width="0.47\\textwidth",fig.cap=paste("Histogram and Q-Q plot for sampling distribution of $\\overline{X}_n$, on real-life data set when $n$ =", sample.sizes[2]),echo=FALSE,fig.pos="ht!",results='hide'>>=
+real.data.results[[2]]
+@
+
+<<realData3,dev='pdf',fig.align='center',fig.show='hold',out.width="0.47\\textwidth",fig.cap=paste("Histogram and Q-Q plot for sampling distribution of $\\overline{X}_n$, on real-life data set when $n$ =", sample.sizes[3]),echo=FALSE,fig.pos="ht!",results='hide'>>=
+real.data.results[[3]]
+@
 
 <<coverageTable,echo=FALSE,results='asis'>>=
 library(xtable)
-colnames(coverage.analysis) <- c("Sample Size", "Coverage")
-print(xtable(coverage.analysis,digits=c(2,0,2),caption="Coverage of confidence intervals for the various sample sizes.",align="lc|c"),include.rownames=F)
+colnames(coverage.analysis) <- c("Sample Size", "Coverage for Real Data", "Coverage for Artificial Data")
+print(xtable(coverage.analysis,digits=c(2,0,4,4),caption="Coverage of confidence intervals for the various sample sizes.",align="|l|c|c|c|"),include.rownames=F)
 @
 
-The table of coverages for specific sample sizes tells the most evocative story: initially the sample size is too small, and therefore the coverage is less than we were anticipating. As $n$ grows, however, we see the coverage stabilizing around it's intended value.
+Off the bat, the plots in figure 1 show us that for $n=\Sexpr{sample.sizes[1]}$ we shouldn't expect good coverage from our normal-based confidence intervals, the right tail of this distribution are looks fatter than it should be. Quantitatively, the coverage was measured at \Sexpr{artificial.data.results[[1]]$coverage * 100}\% which is nowhere near what we expected. Conversely, the small sample coverage with the real data set, measured at \Sexpr{real.data.results[[1]]$coverage * 100}\%, something that's more acceptable. 
 
-\section{Conclusion:} Despite not being equiped with a simple random sample version of the CLT, it's clear that if the sample size is large enough (and thus, if the population size isn't too small), the sampling distribution of a survey sample's mean can start to exhibit normal behaviour.
+In general, the distributions for the sample sizes seem to approach something well-approximated by a Normal random variable, as we can see with the coverage probabilities approaching the target 53.25\%. In particular, the largest sample size yielded confidence intervals that had coverage within \Sexpr{max(abs(0.5325 - coverage.analysis[3,2:3]))*100}\% of the target coverage. However, the middle sample size, $n=\Sexpr{sample.sizes[2]}$, yielded very good normal-based confidence intervals on the artifical data.
 
-\section{Appendix:}
+\section{Conclusion:} Though more investigation could be performed, this shallow study has revealed that letting the sample size get as large as 80\% (and as small as 1.2\%) the population size can yield sampling distributions that are well-approximated with a normal random variable. For artificial data, a bit of caution should be employed when taking samples that are as small as the 1.2\% threshold, here; however, inside the real data set, the smallest sample size had coverage that wasn't more than \Sexpr{abs(0.5325 - coverage.analysis[1,2])*100}\% from our target (which may, or may not be acceptable for certain investigators).
+
+All in all, it seems that there's a great deal in flexibility regarding how large a simple random sample needs to be, relative to the population size, inorder to perform reasonable inference with normal-based approximations.
+
+\section{Appendix:} Code to be released after due date.
 <<stayInside,echo=FALSE>>=
   options(width=60)
   listing <- function(x, options) {
@@ -194,8 +218,8 @@ The table of coverages for specific sample sizes tells the most evocative story:
   knit_hooks$set(source=listing, output=listing)
 @
 
-<<refChunk,ref.label="simulationCode",eval=FALSE,highlight=F>>=
-@
+%<<refChunk,ref.label="simulationCode",eval=FALSE,highlight=F>>=
+%@
 \end{document}
 
 <<echo=FALSE,eval=FALSE>>=
