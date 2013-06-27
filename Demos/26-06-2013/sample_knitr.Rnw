@@ -1,0 +1,61 @@
+\documentclass{article}
+
+\usepackage{amsmath,amssymb,palatino}
+
+\begin{document}
+
+<<preamble,echo=FALSE>>=
+require(ggplot2)
+require(plyr)
+
+n <- 1000 # sample size
+sample.chisq <- rchisq(n=n,df=5)
+sample.studentst <- rnorm(n=n)/sqrt(sample.chisq/5) #5
+sample.normal <- rnorm(n=n,mean=17,sd=6)
+sample.exp <- rexp(n=n,rate=1/10)
+
+sample.data <- data.frame(ChiSq = sample.chisq, StudentsT=sample.studentst, Normal=sample.normal, Exp=sample.exp)
+
+head(sample.data)
+
+standardize <- function(sample) {
+  return((sample-mean(sample))/sd(sample))
+}
+
+standardized.data <- data.frame(apply(X=sample.data,MARGIN=2,FUN=standardize))
+standardized.data$x <- seq(-10,10,length.out=n)
+standardized.data <- transform(standardized.data,dNorm=dnorm(x=x),pNorm=pnorm(x))
+
+head(standardized.data)
+@
+
+Some text between chunks
+\[
+\text{analysis}(\tau_{\nu=5})
+\]
+
+
+<<StudentTsQQCDF,dev='pdf',out.width="0.45\\textwidth",fig.align='center',fig.show='hold',fig.pos="ht!",fig.cap="here's a caption!",echo=FALSE,warning=FALSE,message=FALSE>>=
+## StudentT vs. Normal -- QQ
+ggplot(data=standardized.data) + stat_qq(aes(sample=StudentsT)) + geom_abline(slope=1,intercept=0,color='red') + labs(title="Q-Q plot of Student's T (df=5) vs. Std. Normal")
+
+## StudentT vs. Normal -- CDFs
+ggplot(data=standardized.data) + stat_ecdf(aes(x=StudentsT),color='blue',alpha=0.5) + geom_line(aes(x=x,y=pNorm),color='red',alpha=0.5) + xlim(-5,5) + labs(title="eCDF of Student's T (df = 5) vs. CDF of Standard Normal")
+@
+<<studentTDensity,dev='pdf',out.width="0.75\\textwidth",fig.align='center',fig.pos="ht!",fig.cap="here's a caption!",echo=FALSE,warning=FALSE,message=FALSE>>=
+## StudentT vs. Normal -- densities
+ggplot(data=standardized.data) + geom_ribbon(aes(x=x,ymin=0,ymax=dNorm),fill='blue',alpha=0.5) + stat_density(adjust=1.5,aes(x=StudentsT),fill='red',alpha=0.5) + xlim(-3.75,3.75)  + labs(title="kde of Student's T (df = 5, red) over a density of Std. Normal (blue)")
+@
+<<>>=
+## ChiSq vs. Normal -- QQ
+ggplot(data=standardized.data) + stat_qq(aes(sample=ChiSq)) + geom_abline(slope=1,intercept=0,color='red') + labs(title=expression(paste("Q-Q plot of ", chi[nu=5]^2, " vs. Std. Normal",sep="")),x="Std. Normal Quantiles",y=expression(paste(chi[nu=5]^2, " Quantiles")))
+
+## Chi-Squared vs. Normal -- densities
+ggplot(data=standardized.data) + geom_ribbon(aes(x=x,ymin=0,ymax=dNorm),fill='blue',alpha=0.5) + stat_density(adjust=1.5,aes(x=ChiSq),fill='red',alpha=0.5) + xlim(-3.75,3.75)  + labs(title=expression(paste("kde of ", chi[nu=5]^2, " (red) over a density of Std. Normal (blue)", sep="")))
+@
+<<ChiSqCDF>>=
+## ChiSq (df=5) vs. Normal -- CDFs
+ggplot(data=standardized.data) + stat_ecdf(aes(x=ChiSq),color='blue',alpha=0.5) + geom_line(aes(x=x,y=pNorm),color='red',alpha=0.5) + xlim(-5,5) + labs(title=expression(paste("eCDF of ", chi[nu=5]^2, " over CDF of Standard Normal",sep="")))
+@
+
+\end{document}
