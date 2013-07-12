@@ -1,0 +1,28 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath,amssymb,palatino}
+\usepackage[landscape,textheight=8.5in,textwidth=11in]{geometry}
+\begin{document}
+
+\begin{table}
+\centering
+\begin{tabular}{|l|l|c|c|} \hline
+ & Density & Mean & Variance \\ \hline
+$X \sim N(\mu,\sigma^2)$ & $f_{X}(a; \mu,\sigma^2) = \dfrac{1}{\sigma\sqrt{2\pi}}\exp\left(-\dfrac{(a-\mu)^2}{2\sigma^2}\right)$ & $\mu$ & $\sigma^2$ \\ \hline
+$Y \sim \Gamma(\alpha,\beta)$ & $ f_{Y}(x;\alpha,\beta) = \dfrac{\beta^\alpha}{\Gamma(\alpha)} x^{\alpha-1} e^{-\beta x} I(x > 0)$ & $\dfrac{\alpha}{\beta}$ & $\dfrac{\alpha}{\beta^2}$ \\ \hline
+$Z \sim \beta eta(a,b)$ & $f_{Z}(y;a,b) = \dfrac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)} y^{a-1}(1-y)^{b-1} I(y \in [0,1]) $ & $\dfrac{a}{a+b}$ & $\dfrac{ab}{(a+b)^2(a+b+1)}$ \\ \hline
+$U \sim Unif(a,b)$ & $f_{U}(z;a,b) = \dfrac{I(z \in [a,b])}{b-a}$ & $\dfrac{a+b}{2}$ & $\dfrac{(b-a)^2}{12}$\\ \hline
+$S \sim Exp(\lambda)$ & $f_{S}(u;\lambda)= \lambda e^{-\lambda u} I(u \geq 0)$ & $\dfrac{1}{\lambda}$ & $\dfrac{1}{\lambda^2}$\\ \hline
+$T \sim \chi_{\nu}^2$ & $f_{T}(s;\nu) = \dfrac{s^{\nu/2 -1} e^{-s/2}}{2^{\nu/2} \Gamma(\nu/2)}  I(s \geq 0)$ & $\nu$ & $2 \nu$\\ \hline
+$R \sim Pareto(\alpha,\ell)$ & $ f_{R}(k;\alpha,\ell)= \dfrac{\alpha \ell^{\alpha}}{k^{\alpha+1}} I(k \geq \ell)$ & $\begin{cases} \infty & \alpha \leq 1 \\ \dfrac{\alpha \ell}{\alpha -1} & \alpha > 1 \end{cases} $ & $\begin{cases} \infty & \alpha \in (1,2] \\ \dfrac{\ell^2 \alpha}{(\alpha-1)^2(\alpha-2)} & \alpha > 2 \end{cases} $\\ \hline
+$A \sim Bernoulli(p)$ & $f_{A}(x;p) = p^{x}(1-p)^{1-x} I(x \in \{0,1\})$ & $p$ & $p(1-p) $\\ \hline
+$B \sim Geometric(p)$ & $f_{B}(z;p) = p(1-p)^z I(z \in \mathbb{N})$ & $\dfrac{1-p}{p}$ & $\dfrac{1-p}{p^2}$ \\ \hline
+$C \sim Poisson(\lambda)$ & $f_{C}(y;\lambda)= e^{-\lambda} \dfrac{\lambda^y}{y!} I(y \in \mathbb{N})$ & $\lambda$ & $\lambda$ \\ \hline
+$D \sim Binomial(n,p)$ & $\displaystyle f_{D}(s;n,p) = \binom{n}{s} p^s (1-p)^{n-s} I(s \in \{0,1,\ldots, n\})$ & $np$ & $np(1-p)$ \\ \hline
+$X \sim Multinomial(n,\vec{p})$ & $f_{X}(\vec{u};n,\vec{p}) = \dfrac{n!}{p_1! p_2! \cdots p_{m}!} p_{1}^{u_1} p_{2}^{u_2} \cdots p_{m}^{u_m}$ & $E(X_i) = np_i$ & $\text{var}(X_i) = np_i(1-p_i)$ \\ \hline
+$F \sim HypGeo(N,K,n)$ & $\displaystyle f_{F}(v;N,K,n) = \dfrac{\binom{K}{v}\binom{N-K}{n-v}}{\binom{N}{n}} I(\max(0, n+K-N) \leq v \leq \min(K,n))$ & $\dfrac{nK}{N}$ & $n\dfrac{K}{N}\dfrac{N-K}{N}\dfrac{N-n}{N-1}$\\ \hline
+$G \sim NBinomial(p,s)$ & $\displaystyle f_{G}(j;p,s) = \binom{j-1}{s-1} p^s (1-p)^{j-s} I(j \in \{s, s+1, \ldots\})$ & $\dfrac{sp}{1-p}$ & $\dfrac{sp}{(1-p)^2}$ \\ \hline
+\end{tabular}
+\end{table}
+
+
+\end{document}
