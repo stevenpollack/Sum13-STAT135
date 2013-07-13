@@ -1,3 +1,4 @@
+.gitignore
 .Rproj.user
 .Rhistory
 .RData
@@ -8,3 +9,4 @@
 *.log
 *.synctex.gz
 *.DS_Store
+!*/11-07-2013/*.tex
