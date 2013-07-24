@@ -98,6 +98,7 @@ calcGLRT.and.X2(O,p.0)
 # GLRT ~ 20.89, X.squared ~ 21.57 => reject
 
 ### 9.43.c
+
 ### calculate p.hat from Likelihood that considers 
 ### \vec{p} = (p,p,p,p,p) for some p \in [0,1]
 ### turns out to be "NPMLE".
@@ -106,5 +107,3 @@ p.hat <- 9207/(9207+8743)
 p.0 <- dbinom(x=0:5,size=5,prob=p.hat)
 calcGLRT.and.X2(O,p.0,4)
 # GLRT ~ 8.89, X.squared ~ 8.74 (p-value ~ 0.067)
-
-
