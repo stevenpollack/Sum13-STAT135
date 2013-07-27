@@ -1,0 +1,164 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath,amssymb,fancyhdr,palatino}
+\usepackage[textheight=8in,textwidth=6.5in]{geometry}
+
+%%%%% knitr code to make sure things stay inside listings box:
+\usepackage{listings}
+\usepackage{inconsolata}
+
+\lhead{STAT 135}
+\chead{Lab \#4 -- Sample Report}
+\rhead{Data Visualization}
+\cfoot{\thepage}
+
+\newcommand{\R}{\texttt{R}}
+\newcommand{\N}{\ensuremath{\mathcal{N}}}
+
+\DeclareMathOperator{\var}{var}
+
+\title{STAT 135 \\ Lab Assignment \#4}
+\author{Solutions}
+\date{}
+
+\begin{document}
+\maketitle
+\pagestyle{fancy}
+
+<<globalParameters,echo=FALSE>>=
+set.seed(1234)
+opts_chunk$set(comment="#",tidy=F,warning=FALSE,message=FALSE,highlight=FALSE)
+library(ggplot2)
+library(reshape2)
+@
+
+<<stayInside,echo=FALSE>>=
+  options(width=60)
+  listing <- function(x, options) {
+     paste("\\begin{lstlisting}[basicstyle=\\ttfamily,breaklines=true]\n", x,"\\end{lstlisting}\n", sep = "")
+  }
+  
+  knit_hooks$set(source=listing, output=listing)
+@
+
+\paragraph{\#46}
+\begin{enumerate}
+  \item[a)] For both males and females, make scatterplots of heart rate versus body temperature. Comment on the relationship or lack thereof.
+  <<prob46a,dev='pdf',fig.cap="Scatterplots of Heart rate versus Body temperature for Males and Femalse",fig.align='center',out.width='0.85\\textwidth'>>=
+  ### load bodytemp.txt
+  bodytemp.data <- read.table(file='bodytemp.txt',header=T)
+  
+  ### relabel factors
+  bodytemp.data <- within(bodytemp.data,{
+    genderFactor<-factor(gender,labels=c("Male","Female"))
+    })
+  
+  ### plot side-by-side scatter plots
+  ggplot(data=bodytemp.data,aes(y=rate,x=temperature)) + geom_point() + facet_wrap(~genderFactor) + labs(list(x="Temperature (Fahrenheit)",y="Heart Rate (bpm)"))
+  @
+  From the scatterplots in figure 1, it doesn't seem like there's much in the way of any relationship between heart rate and body temperature.
+  \item[b)] Quantify the strengths of the relationships by calculating Pearson and rank correlation coefficients.
+  <<prob46b>>=  
+  male.indices <- with(bodytemp.data, {which(gender == 1)})
+  female.indices <- -male.indices
+  
+  ### calculate various correlation coefficients
+  male.cors <- with(bodytemp.data, {
+    list(pearson=cor(temperature[male.indices],rate[male.indices]),spearman=cor(temperature[male.indices],rate[male.indices],method="spearman")) 
+  })
+   
+  print(male.cors)
+  
+  female.cors <- with(bodytemp.data, {
+    list(pearson=cor(temperature[female.indices],rate[female.indices]),spearman=cor(temperature[female.indices],rate[female.indices],method="spearman")) 
+  })
+  
+  print(female.cors)
+  @
+  Both pairs of correlation coefficients are pretty abysmal; this indicates (quantitatively) that there isn't much of a relationship between heart rate and body temperature.
+  \item[c)] Does the relationship for males appear to be the same as that for females? Examine this question graphically, by making a scatterplot showing both females and males and identifying females and males by different plotting symbols.
+  <<prob46c,dev='pdf',fig.align='center',fig.cap="Scatterplot of both male and female heart rates versus body temperatures. Female data points are green triangles.",out.width="0.85\\textwidth">>=
+    ggplot(data=bodytemp.data,aes(y=rate,x=temperature,color=genderFactor,shape=genderFactor)) + geom_point() + labs(list(shape="Gender",color="Gender",x="Temperature (Fahrenheit)",y="Heart Rate (bpm)"))
+  @
+  Both male and female sexes seem to exhibit the same pattern of behaviour
+\end{enumerate}
+\paragraph{\#47}
+\begin{enumerate}
+  \item[a)] Use histograms of durations and time intervals as well as other graphical methods to examine the fidelity of Old Faithful, and summarize your findings.
+  <<prob47a,echo=FALSE>>=
+  ### load data
+  oldfaithful.data <- read.table(file='oldfaithful.txt',header=T)
+  
+  erupt.dur.hist <- ggplot(data=oldfaithful.data,aes(x=DURATION)) + geom_histogram(binwidth=0.1) + geom_point(aes(y=0),color='red') + labs(list(x="Eruption duration (minutes)"))
+  
+  erupt.dur.ecdf <- ggplot(data=oldfaithful.data,aes(x=DURATION)) + stat_ecdf() + labs(list(x="Eruption duration (minutes)",y=expression(F[n](x)),title="Emprical CDF of Eruption duration"))
+  
+  erupt.int.hist <- ggplot(data=oldfaithful.data,aes(x=INTERVAL)) + geom_histogram(binwidth=2) + geom_point(aes(y=0),color='red') + labs(list(x="Time between eruptions (minutes)"))
+  
+  erupt.int.ecdf <- ggplot(data=oldfaithful.data,aes(x=INTERVAL)) + stat_ecdf() + labs(list(x="Time between eruptions (minutes)",y=expression(F[n](x)),title="Emprical CDF of Eruption intervals"))
+  @
+  <<dev='pdf',fig.show='hold',out.width="0.4\\textwidth",fig.pos="ht!",echo=FALSE,fig.align='center',fig.cap="Histogram and ECDF for Eruption duration times.">>=
+  show(erupt.dur.hist)
+  show(erupt.dur.ecdf)
+  @
+    <<dev='pdf',fig.show='hold',out.width="0.4\\textwidth",fig.pos="ht!",echo=FALSE,fig.align='center',fig.cap="Histogram and ECDF for Eruption interval times.">>=
+  show(erupt.int.hist)
+  show(erupt.int.ecdf)
+  @
+  From figures 3 and 4, it appears that we're likely to see eruptions lasting (either) between 1 minutes and 2.5 minutes \textit{or} 3.5 minutes and 4.5 minutes. Also, eruptions intervals seem to be somewhat bi-modal with a predominate likelihood to see intervals between 70 and 85 minutes, but it's also lilely to see intervals between 50 and 60 minutes.
+\item[b)] Is there a relationship between the durations of eruptions and the time intervals between them?
+<<prob47b1,dev='pdf',out.width="0.85\\textwidth",fig.cap="Scatterplot of eruption duration against interval time.",fig.align='center'>>=
+  ggplot(data=oldfaithful.data,aes(x=INTERVAL,y=DURATION)) + geom_point()
+@
+It appears as if there's a (positive) direct relationship between eruption interval and duration. Indeed, the Pearson correlation coefficient is about 0.86.
+<<prob47b2>>=
+print(with(oldfaithful.data,cor(INTERVAL,DURATION)))
+@
+\end{enumerate}
+\paragraph{\#47}
+\begin{enumerate}
+  \item[a)] Plot draft number versus day number. Do you see any trend?
+  <<prob48a,dev='pdf',fig.align='center',out.width="0.85\\textwidth",fig.cap="Draft number versus Day number">>=
+  lottery.data <- read.table(file="1970lottery.txt",header=T)
+  
+  ggplot(data=lottery.data) + geom_point(aes(x=Day_of_year,y=Draft_No)) + labs(list(x="Day of the year",y="Draft number"))
+  @
+  I don't see a trend.
+
+  \item[b)] Calculate the Pearson and rank correlation coefficients. What do they suggest?
+  <<prob48b>>=
+  correlation.coefs <- with(lottery.data, {
+    list(pearson=cor(Day_of_year,Draft_No),spearman=cor(Day_of_year,Draft_No,method="spearman"))
+  })
+  
+  print(correlation.coefs)
+  @
+  The negative correlations indicate that as Day of Year increases, Draft Number should decrease. But it should be noted that the magnitude of the coefficients, overall, are fairly small...
+  \item[c)] Is the correlation statistically significant? One way to assess this is via a permutation test. Randomly permute the draft numbers and find the correlation of this random permutation with the day numbers. Do this 100 times and see how many of the resulting correlation coefficients exceed the one observed in the data. If you are not satisfied with 100 times, do it 1,000 times.
+  <<prob48c>>=
+  isPermutationLarger <- function(calculatedCorrelation) {
+    draft_no <- sample(1:366)
+    pearson.cor <- cor(draft_no,1:366)
+    spearman.cor <- cor(draft_no,1:366,method="spearman")
+    #print(abs(as.numeric(calculatedCorrelation)))
+    #print(abs(c(pearson.cor, spearman.cor)))
+    abs(as.numeric(calculatedCorrelation)) < abs(c(pearson.cor, spearman.cor))
+  }
+  
+  simulation <- replicate(n=1000,expr={isPermutationLarger(correlation.coefs)})
+  
+  print(rowMeans(simulation))
+  @
+  Turns out what we're seeing is \textit{\textbf{incredbily}} significant! In fact, the chance we see something more extreme is basically 0.
+
+\item[d)] Make parallel boxplots of the draft numbers by month. Do you see any pattern?
+  <<prob48d,dev='pdf',fig.align='center',out.width="0.85\\textwidth",fig.cap="Boxplots of draft numbers for each month. Note the trend in decreasing medians as the months progress.">>=
+  melted.lottery <- melt(lottery.data,measure.vars="Draft_No",id.vars="Month")
+  melted.lottery <- within(melted.lottery,{
+    Month2 <- factor(x=Month,levels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),ordered=T)
+  })
+  ggplot(data=melted.lottery,aes(x=Month2,y=value)) + geom_boxplot() + labs(list(x="Month",y="Draft Number"))
+  @
+ The trend is fairly alarming: as we progress through the year, the median of the draft numbers decreases. (As does the distance between the 25th and 75th percentiles.)
+\end{enumerate}
+\end{document}
