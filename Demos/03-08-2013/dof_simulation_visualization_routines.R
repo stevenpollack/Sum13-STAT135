@@ -84,7 +84,6 @@ show(error.plot)
 ggplot(data=simulation.data)+ stat_qq(aes(sample=results),distribution=qchisq,dparams=list(df=expected.dof)) + geom_abline(intercept=0,slope=1,color='red')
 
 ### save the plots with simulation specs in prefix
-sim.specs <- paste(I,J,K,simulation.length,sep="-")
 ggsave(plot=ecdf.plot,filename=paste(sim.specs,"ecdf_cdf_overlay.png",sep="-"))
 ggsave(plot=error.plot,filename=paste(sim.specs,"error_vs_dof.png",sep="-"))
 

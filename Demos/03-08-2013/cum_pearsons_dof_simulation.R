@@ -1,6 +1,7 @@
 ### set up simulation parameters
 random.table.size <- sample(x=3:6,size=3,replace=T)
 I <- random.table.size[1]; J <- random.table.size[2]; K <- random.table.size[3]
+# I <- 4; J <- 6; K <-5;
 expected.dof <- (I-1)*(J-1)*K
 
 ### set up log-file
@@ -12,20 +13,12 @@ cat(paste("Preparing a simulation for a", I, "x", J, "x", K, "contingency table.
 generateOnePoint <- function(I,J,K) {
   ### scheme is simple:
   ### --Z: discrete uniform from [1,K]
-  ### --X: floored normal whose SD depends on Z,
-  ###      X is forced to lie in [0,I-1]
-  ### --Y: truncated, floored poisson with rate=Z,
-  ###      Y is not to exceed J
+  ### --X: truncated Geo(p=Z/k+1)
+  ### --Y: truncated, Pois(r=Z)
   
   Z <- sample(x=1:K,size=1)
-  
-  X.raw <- floor(rnorm(mean=I/2,sd=sqrt(Z),n=1))
-  ### X should be in [0,I-1]
-  X <- if ( X.raw < 0 ) { 0 } else if ( X.raw > I-1 ) { I-1 } else { X.raw }
-  
-  Y.raw <- floor(1.5*rpois(lambda=Z,n=1))
-  ### Y should be in [0,J], truncate if need be
-  Y <- if (Y.raw > J) {J} else {Y.raw}
+  X <- floor(I*rbeta(n=1,shape1=2+Z/(K+1),shape2=2))
+  Y <- floor(J*rbeta(n=1,shape1=2,shape2=2+Z/(K+1)))
   
   ### package these variables into a triplet
   return(c(X,Y,Z))
@@ -35,14 +28,14 @@ positivity.check <- function(contingency.table, threshold=0, verbose=F) {
   ### so as to not break any positivity assumptions for Chi-Square test
   ### returns TRUE if the check is good
   if (min(contingency.table) <= threshold) {
-    if (verbose) {writeLines("Minimum cell count is below specified threshold of",threshold)}
+    if (verbose) {writeLines(paste("Minimum cell count is below specified threshold of",threshold))}
     return(F)
   } else {
-    if (verbose) {writeLines("All cell counts above",threshold)}
+    if (verbose) {writeLines(paste("All cell counts above",threshold))}
     return(T)
   }
 }
-generateContingencyTable <- function(I,J,K,num.of.observations=100000,threshold=0) {
+generateContingencyTable <- function(I,J,K,num.of.observations=100000,threshold=10) {
   ### set a high number of observations to assure asymptotics
   ### as well as no positivity issues
   
@@ -52,15 +45,24 @@ generateContingencyTable <- function(I,J,K,num.of.observations=100000,threshold=
     return(table(simulation.df))
   }
   
-  ### Check that generated table passes positivity check
+  ## Check that generated table passes positivity check
+  simulated.contingency.table <- genTable(I,J,K)
   repeat {
-    simulated.contingency.table <- genTable(I,J,K)
-    if ( positivity.check(simulated.contingency.table,threshold) ) { # table has no issues
+    if ( positivity.check(simulated.contingency.table,threshold,verbose=FALSE) ) { # table has no issues
       break
+    } else {
+      simulated.contingency.table <- simulated.contingency.table + genTable(I,J,K)
     }
   }
   
   return(simulated.contingency.table) 
+}
+
+checkForIndependence <- function(table,x,y,z) {
+  total <- sum(table)
+  joint.prob <- table[x,y,z]
+  factor.prob <- sum(table[x,,z])*sum(table[,y,z])/sum(table[,,z])
+  list(lhs=joint.prob,rhs=factor.prob,diff=abs(joint.prob-factor.prob)/total)
 }
 calculatePearsonsX2 <- function(two.way.table) {
   ### this function calculates X2 for an IxJ table
@@ -79,7 +81,7 @@ calculateCumulativePearsons <- function(three.way.table) {
 }
 
 ### run simulation
-require(parallel) # I know this may be redundant
+require(parallel)
 
 num.of.cores <- detectCores()
 simulation.length <- 175
@@ -87,21 +89,21 @@ simulation.length <- 175
 cat(paste("Commencing a", simulation.length, "point simulation, on", num.of.cores, "cores...\n"),file=log.filename,append=T)
 
 sim.time <- system.time(expr={
-  simulation.data <- data.frame(results=unlist(mclapply(X=1:simulation.length,
-                                      mc.cores=num.of.cores,
-                                      FUN=function(dummy.var) {
-  simulated.contingency.table <- generateContingencyTable(I,J,K,threshold=10)
-  calculateCumulativePearsons(simulated.contingency.table)
-}
-                                                         )
-                                                )
-                                 )
+  cumulative.Pearsons <- mclapply(X=1:simulation.length,
+                                  mc.cores=num.of.cores,
+                                  FUN=function(dummy.var){
+                                    ### generate random table, then find its X^2 stat
+                                    random.table <- generateContingencyTable(I,J,K)
+                                    calculateCumulativePearsons(random.table)
+           })
+  simulation.data <- data.frame(results=unlist(cumulative.Pearsons))
   })
 
 ### finish up and report stats
-image.filename <- paste("dof_sim", gsub(pattern=".out",replacement=".Rdata",x=log.filename), sep="-")
+sim.specs <- paste(I,J,K,simulation.length,sep="-")
+image.filename <- paste("dof_sim", sim.specs, gsub(pattern=".out",replacement=".Rdata",x=log.filename), sep="-")
 
-cat(paste(simulation.length, "point simulation required", round(sim.time["elapsed"]/60,digits=2), "minutes...\nSaving image to", image.filename),file=log.filename,append=T)
+cat(paste(simulation.length, "point simulation required", round(sim.time["elapsed"]/60,digits=2), "minutes...\nSaving image to", image.filename, "\n"),file=log.filename,append=T)
 
 save.image(file=image.filename)
 
