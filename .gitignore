@@ -1,8 +1,12 @@
 .gitignore
 .Rproj.user
+*.Rout
 .Rhistory
-.RData
+*.RData
+*.Rdata
 *.pdf
+*.png
+*.out
 /Past_Labs/*
 *.Rproj
 *.tex

@@ -44,3 +44,5 @@ rejectionRegion <- function(lwr,upr) {
   b<-phyper(k=16,n=13,m=17,q=upr,lower.tail=F)
   return(a+b)
 }
+
+right.tail <- phyper(q=prob.19[1,1],m=17,n=13,k=16,lower.tail=F); right.tail
