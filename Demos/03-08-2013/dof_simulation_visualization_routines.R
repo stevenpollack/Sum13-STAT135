@@ -57,19 +57,12 @@ ecdf.plot <- ggplot(data=s3) +
 show(ecdf.plot)
 
 ### check out deviation of eCDF from various other Chi-squared CDF's
-sim.study2 <- with(data=sim.study,expr={
-  df <- 1:(3*expected.dof)
-  max.error <- sapply(X=df,FUN=function(df){compareECDF(results,df)})
-  data.frame(df=df, max.error=max.error)
-})
 
 ss2 <- with(data=simulation.data,expr={
   df <- 1:(3*expected.dof)
   max.error <- sapply(X=df,FUN=function(df){compareECDF(results,df)})
   data.frame(df=df, max.error=max.error)
 })
-
-ggplot(data=data.frame(p=c(0:25,32:127))) + geom_point(aes(x=p%%16,y=p%/%6,shape=factor(p)),size=3)
 
 error.plot <- ggplot(data=ss2) +
   geom_vline(xintercept=expected.dof,color='red') +

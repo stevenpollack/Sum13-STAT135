@@ -1,15 +1,3 @@
-checkForIndependence <- function(table,x,y,z) {
-  total <- sum(table)
-  joint.prob <- table[x,y,z]
-  factor.prob <- sum(table[x,,z])*sum(table[,y,z])/sum(table[,,z])
-  list(lhs=joint.prob,rhs=factor.prob,diff=abs(joint.prob-factor.prob)/total)
-}
-
-### set up simulation parameters
-random.table.size <- sample(x=3:6,size=3,replace=T)
-I <- random.table.size[1]; J <- random.table.size[2]; K <- random.table.size[3]
-# I <- 4; J <- 6; K <-5;
-
 findClosestChiSquare <- function(I,J,K, num.of.tables=500, min.obs.per.table=100000, min.cell.count=10, verbose=F, visualize.results=F, save.results=T) {
   ### 
   expected.dof <- (I-1)*(J-1)*K
@@ -152,6 +140,3 @@ findClosestChiSquare <- function(I,J,K, num.of.tables=500, min.obs.per.table=100
   ### finally, return closest.Model
   return(closest.model)
 }
-
-findClosestChiSquare(4,6,5,3,1000,verbose=T,save.results=F)
-
