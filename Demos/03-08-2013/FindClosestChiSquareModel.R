@@ -99,8 +99,8 @@ findClosestChiSquare <- function(I,J,K, num.of.tables=500, min.obs.per.table=100
     
     candidate.dfs <- 1:(3*expected.dof) # search beyond 3 times predicted
     Fn <- ecdf(results) # ecdf is a closure, see help file
-    
-    distances <- sapply(X=candidate.dfs, FUN=supNorm, eCDF=Fn, q=results)
+
+    distances <- sapply(X=candidate.dfs, FUN=function(df){supNorm(df,Fn,results)})
     which.min(distances)
   })
 {
