@@ -73,8 +73,8 @@ error.plot <- ggplot(data=ss2) +
             title=paste("Max Error between eCDF and various Chi-Squared CDF's \n Red line at (I-1)(J-1)K DoF")))
 
 show(error.plot)
-
-ggplot(data=simulation.data)+ stat_qq(aes(sample=results),distribution=qchisq,dparams=list(df=expected.dof)) + geom_abline(intercept=0,slope=1,color='red')
+# 
+# ggplot(data=simulation.data)+ stat_qq(aes(sample=results),distribution=qchisq,dparams=list(df=expected.dof)) + geom_abline(intercept=0,slope=1,color='red')
 
 ### save the plots with simulation specs in prefix
 ggsave(plot=ecdf.plot,filename=paste(sim.specs,"ecdf_cdf_overlay.png",sep="-"))
