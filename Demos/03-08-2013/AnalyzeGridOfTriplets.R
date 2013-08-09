@@ -4,6 +4,7 @@ source('FindClosestChiSquareModel.R')
 analyzeGridOfTriplets <- function(I=3:6,J=3:6,K=3:6,num.of.tables=500,min.obs.per.table=1e+05,min.cell.count=10,verbose=F,visualize.results=T,save.results=T){
   ### grid up [3,6]^3 and do 500 data points on each section
   .triplets <- expand.grid(I,J,K)
+  colnames(.triplets) <- c("I","J","K")
   
   ### explore best fitting model over various triplets
   .closestChiSquares <- apply(X=.triplets,
@@ -31,7 +32,7 @@ analyzeGridOfTriplets <- function(I=3:6,J=3:6,K=3:6,num.of.tables=500,min.obs.pe
     require(ggplot2)
     
     # need to work out a dynamic way to generate y
-    distance.heat.map <- ggplot(data=model.comparison.df) + geom_tile(aes(fill=distance,x=Var1-3, y=rep(c(32:29, 26:23, 20:17, 14:11),each=4)))
+    distance.heat.map <- ggplot(data=model.comparison.df) + geom_tile(aes(fill=distance,x=I-3, y=rep(c(32:29, 26:23, 20:17, 14:11),each=4)))
     
     show(distance.heat.map)
     ggsave(filename="triplet-analysis.png",plot=distance.heat.map)
