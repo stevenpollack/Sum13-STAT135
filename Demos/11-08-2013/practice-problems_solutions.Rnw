@@ -18,6 +18,7 @@
 \newcommand{\N}{\ensuremath{\mathcal{N}}}
 
 \DeclareMathOperator{\var}{var}
+\DeclareMathOperator{\cov}{cov}
 
 \title{STAT 135}
 \author{Solutions to Practice Problems}
@@ -43,6 +44,137 @@ library(reshape2)
   knit_hooks$set(source=listing, output=listing)
 @
 
+\paragraph{\#7.7.7} Suppose that a simple random sample is used to estimate the proportion of families in a certain area that are living below the poverty level. If this proportion is roughly 0.15, what sample size is necessary so that the standard error of the estimate is 0.02?
+
+\begin{proof}[Solution]
+From the table on page 214: if the parameter to be estimated in the \textit{proportion} of families living in poverty, $p$, then the sample proportion, $\hat{p}$ is our natural estimate. Furthermore, 
+\[
+  \sigma_{\hat{p}}^2(n,N) = \dfrac{p(1-p)}{n}\left(\dfrac{N-n}{N-1}\right)
+\]
+So, if we solve $\sigma_{\hat{p}}^2(n,N) = 0.02^2$, we have
+\[
+  \frac{0.15\times 0.85}{n}\dfrac{N-n}{N-1} = 0.004 \Longleftrightarrow n = \dfrac{1275 N}{1271 +4N}
+\]
+However, if you ignore the finite population correction term, and assume $N \gg n$, 
+\[
+  n \approx \dfrac{1275}{4} = \Sexpr{round(1275/4,digits=0)}
+\]
+\end{proof}
+
+\paragraph{\#7.7.9} In a simple random sample of 1,500 voters, 55\% said they planned to vote for a particular proposition, and 45\% said they planned to vote against it. The estimated margin of victory for the proposition is thus 10\%. What is the standard error of this estimated margin? What is an approximate 95\% confidence interval for the margin?
+
+\begin{proof}[Solution]
+Consider each polled voter, $X_i$, where
+\[
+  X_i = \begin{cases} 1 &\text{ if they are in favor} \\ 0 &\text{ if they are against} \end{cases}
+\]
+If the true proportion of voters who are in favor of the proposition is $p$, then the margin of victory for the proposition is
+\[
+  m = p - (1-p) = 2p -1
+\]
+Hence, we may estimate $m$ via
+\[
+  \hat{m} = 2\hat{p} - 1
+\]
+where $\hat{p} = \Xbar$. It then follows that 
+\[
+  \sigma^2_{\hat{m}} = \var(2\hat{p}-1) = 4\var(\hat{p}) = 4\sigma_{\hat{p}}^2 = \dfrac{4p(1-p)}{n-1} \times \dfrac{N-n}{N-1}
+\]
+but if we ignore the finite population correction and assume that $N \gg n$, we have that 
+\[
+  \sigma^{2}_{\hat{m}} \approx \dfrac{4\hat{p}(1-\hat{p})}{n-1} = \Sexpr{p.hat <- 0.55; var.p.hat <- 4*p.hat*(1-p.hat)/1499; var.p.hat}
+\]
+Which yields an (approximate) standard error of $\Sexpr{sqrt(var.p.hat)}$.
+
+To get an approximate 95\% confidence interval, we'll consider a central limit type of argument. Why?/How? Well, we know (from page 215) that for $n$ large, but still small relative to $N$, $\hat{p} = \Xbar$ is approximately normal. That is, $\hat{p} \stackrel{approx}{\sim} N(p,p(1-p)/n)$. Thus,
+  \[
+    \hat{m} \stackrel{approx}{\sim} N(m=2p-1, 4p(1-p)/n)
+  \]
+So, to make our confidence interval, we play around with CDF's:
+\begin{align*}
+  P( -\delta \leq Z  \leq \delta) 
+  &\approx P\left(-\delta \leq \frac{\hat{m} - m}{\sqrt{4p(1-p)/n}} \leq \delta \right)  \\
+  &\approx P\left(-\delta \leq \frac{\hat{m} - m}{\sqrt{4{\hat{p}}(1-\hat{{p}})/n}} \leq \delta \right)  \\
+  &= P\left( -\sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta \leq \hat{m} - m \leq \sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta \right) \\
+  &= P\left( \sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta \geq m - \hat{m} \geq -\sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta \right) \\
+  &= P\left( \hat{m} + \sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta \geq m \geq \hat{m} -\sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta \right) \\
+  &= P\left( m \in \left[{\hat{m}} - \sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta,\hat{{m}} + \sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta \right]\right)
+\end{align*}
+So, we just need to find $\delta$ such that $P(|Z| \leq \delta) = 0.95$, but
+\[
+0.95 = P(|Z| \leq \delta) = \Phi(\delta)-\Phi(-\delta) = 2\Phi(\delta) - 1 \Longleftrightarrow 0.975 = \Phi(\delta) \Longleftrightarrow \delta = \Sexpr{delta <- qnorm(0.975); delta}
+\]
+Thus,
+\[
+\left[{\hat{m}} - \sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta,\hat{{m}} + \sqrt{\dfrac{4\hat{p}(1-\hat{p})}{n}}\delta \right] = [\Sexpr{2*p.hat-1 +c(-1,1)*delta*sqrt(4*p.hat*(1-p.hat)/1499)}]
+\]
+\end{proof}
+
+\paragraph{\#7.7.17} A 90\% confidence interval for the average number of children per household, based on a simple random sample is found to be (0.7,2.1). Can we conclude that 90\% of households have between 0.7 and 2.1 children?
+
+\begin{proof}[Solution]
+No. A confidence interval is a bit more subtle than that. When we report a confidence interval like
+\[
+  P\left[\theta \in \left(L(\mathbf{X}), U(\mathbf{X})\right)\right] = (1-\alpha)
+\]
+we're making a statement about two random variables, $L(\X)$, the lower bound of the interval, and $U(\X)$, the upper bound. From this mathematical expression, we say that $100(1-\alpha)$\% of the time, these two random variables make an interval that capture the parameter of interest. 
+
+Just like the sample mean of a particular set of data is a realization of the random variable $\Xbar$, the reported confidence interval is a realization of the random interval, $(L(\X), U(\X))$. 
+\end{proof}
+
+\paragraph{\#7.7.37} Two surveys were independently conducted to estimate a population mean, $\mu$. Denote the estimates and their standard errors by $\Xbar_1$ and $\Xbar_2$, and $\sigma_{\Xbar_1}$ and $\sigma_{\Xbar_2}$. Assume that $\Xbar_1$ and $\Xbar_2$ are unbiased. For some $\alpha$ and $\beta$, the two estimates can be combined to make a better estimator:
+  \[
+    X = \alpha \Xbar_1 + \beta \Xbar_2
+  \]
+\begin{enumerate}
+  \item[a)] Find the conditions on $\alpha$ and $\beta$ that make the combined estiamte unbiased.
+  \item[b)] What choice of $\alpha$ and $\beta$ minimizes the variances, subject to the condition of unbiasedness?
+\end{enumerate}
+
+\begin{proof}[Solution]
+For the unbiasedness, observe that
+  \begin{align*}
+    E(X) &= E(\alpha\Xbar_1 + \beta\Xbar_2) \\
+         &= \alpha E(\Xbar_1) + \beta E(\Xbar_2) \\
+         &= \alpha \mu + \beta \mu \\
+         &= \mu(\alpha + \beta)
+  \end{align*}
+  So $X$ is unbiased \textit{if and only if} $\alpha + \beta = 1$. 
+
+Now, what is the variance of our combined estimate?
+  \begin{align*}
+    \var(X) &= \var(\alpha\Xbar_1 + \beta\Xbar_2) \\
+           &= \alpha^2\var(\Xbar_1) + \beta^2\var(\Xbar_2) + 2\alpha\beta \cov(\Xbar_1, \Xbar_2) \\
+           &= \alpha^2 \sigma_{\Xbar_1}^2 + \beta^2 \sigma_{\Xbar_2}^2
+  \end{align*}
+  where we were able to drop the covariance term since we were told that the surveys were independently conducted, therefore functions of their data should also be independent. Now, if we are use the constraint that $E(X) = \mu$, then we can replace $\alpha^2$ above with $(1-\beta)^2$. Hence, 
+  \begin{align*}
+    \var(X) &= (1-\beta)^2 \sigma_{\Xbar_1}^2 + \beta^2 \sigma_{\Xbar_2}^2 \\
+          &= (1-2\beta + \beta^2) \sigma_{\Xbar_1}^2 + \beta^2 \sigma_{\Xbar_2}^2 \\
+           &= (1-2\beta)\sigma_{\Xbar_1}^2 + \beta^2 \left(\sigma_{\Xbar_1}^2 + \sigma_{\Xbar_2}^2\right) 
+  \end{align*}
+  Thus, we may now think of $\var(X) = f(\beta)$, and optimizing it can be done with simple calculus (this isn't the only way to do this, though). 
+  \begin{align*}
+    \dfrac{d}{d\beta}\var(X) &= 0 \Longleftrightarrow  -2\sigma_{\Xbar_1}^{2} + 2\beta \left(\sigma_{\Xbar_1}^2 + \sigma_{\Xbar_2}^2\right) = 0 \Longleftrightarrow \beta = \dfrac{\sigma_{\Xbar_1}^2 }{\sigma_{\Xbar_1}^2 + \sigma_{\Xbar_2}^2} \\
+    \dfrac{d^2}{d\beta^2}\var(X) &= 2\left(\sigma_{\Xbar_1}^2 + \sigma_{\Xbar_2}^2\right) > 0
+  \end{align*}
+  This demonstrates that our critical point is a global minimum, which means
+  \begin{align*}
+    \alpha &= \dfrac{\sigma_{\Xbar_2}^2 }{\sigma_{\Xbar_1}^2 + \sigma_{\Xbar_2}^2} \\
+    \beta &= \dfrac{\sigma_{\Xbar_1}^2 }{\sigma_{\Xbar_1}^2 + \sigma_{\Xbar_2}^2}
+  \end{align*}
+  minimze the variance of $X$. 
+  
+  Note, that since
+  \[
+    \sigma_{\Xbar_1}^2 + \sigma_{\Xbar_2}^2 > \max(\sigma_{\Xbar_1}^2,\sigma_{\Xbar_2}^2) \Longleftrightarrow \frac{1}{\sigma_{\Xbar_1}^2 + \sigma_{\Xbar_2}^2} < \frac{1}{\max(\sigma_{\Xbar_1}^2,\sigma_{\Xbar_2}^2)}
+  \]
+  it follows that these particular values of $\alpha$ and $\beta$, yield
+  \[
+    \var(X) = \dfrac{\sigma_{\Xbar_1}^2 \sigma_{\Xbar_2}^2}{\sigma_{\Xbar_1}^2 + \sigma_{\Xbar_2}^2} < \frac{\sigma_{\Xbar_1}^2 \sigma_{\Xbar_2}^2}{\max(\sigma_{\Xbar_1}^2,\sigma_{\Xbar_2}^2)} < \min(\sigma_{\Xbar_1}^2,\sigma_{\Xbar_2}^2)
+  \]
+  which is pretty cool. If you think about it, it means that we've found a way to take two estimates, and make a less variable (i.e. better) estimator from them.
+\end{proof}
 \paragraph{\#9.11.1} A coin is thrown independently 10 times to test the hypothesis that the probability of heads is $1/2$ versus the alternative that the probability is not $1/2$. The test rejects if either 0 or 10 heads are observed.
 \begin{enumerate}
   \item[a)] What is the significance level of the test?
