@@ -1,0 +1,278 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath,amssymb,amsthm,fancyhdr,palatino}
+\usepackage[textheight=8in,textwidth=6.5in]{geometry}
+
+%%%%% knitr code to make sure things stay inside listings box:
+\usepackage{listings}
+\usepackage{inconsolata}
+
+\lhead{STAT 135}
+\chead{Practice Problems}
+\rhead{Solutions}
+\cfoot{\thepage}
+
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\Xbar}{\overline{X}}
+\newcommand{\R}{\texttt{R}}
+\newcommand{\N}{\ensuremath{\mathcal{N}}}
+
+\DeclareMathOperator{\var}{var}
+
+\title{STAT 135}
+\author{Solutions to Practice Problems}
+\date{}
+
+\begin{document}
+\maketitle
+\pagestyle{fancy}
+
+<<globalParameters,echo=FALSE>>=
+set.seed(1234)
+opts_chunk$set(comment="#",tidy=F,warning=FALSE,message=FALSE,highlight=FALSE)
+library(ggplot2)
+library(reshape2)
+@
+
+<<stayInside,echo=FALSE>>=
+  options(width=60)
+  listing <- function(x, options) {
+     paste("\\begin{lstlisting}[basicstyle=\\ttfamily,breaklines=true]\n", x,"\\end{lstlisting}\n", sep = "")
+  }
+  
+  knit_hooks$set(source=listing, output=listing)
+@
+
+\paragraph{\#9.11.1} A coin is thrown independently 10 times to test the hypothesis that the probability of heads is $1/2$ versus the alternative that the probability is not $1/2$. The test rejects if either 0 or 10 heads are observed.
+\begin{enumerate}
+  \item[a)] What is the significance level of the test?
+  \item[b)] If in fact the probability of heads is 0.1, what is the power of the test?
+\end{enumerate}
+
+\begin{proof}[Solution] Let's explicitly setup our hypotheses:
+\[
+H_0: \theta = \frac{1}{2}, \text{ versus } H_1: \theta\neq \frac{1}{2}
+\]
+Recall that in the situation of a composite hypothesis like $H_1 : \theta \neq 1/2$, we want to talk about a (general) power function:
+\[
+\pi(p) = P(\text{ reject $H_0$} \mid \theta = p) = P( \#H = 0,10 \mid \#H \sim Bin(10,p))
+\]
+The benefit to a definition like this, now, is that we can talk about significance and power through one item ($\pi(p)$). 
+
+Since significance is just the chance of committing type-I error:
+\[
+\alpha = \pi(0.5) = P(\#H = 0,10 \mid \#H \sim Bin(10,0.5)) = \Sexpr{sum(dbinom(x=c(0,10),size=10,prob=0.5))}
+\]
+The power, if the true probability is 0.1, is just the value of the power function at this value:
+\[
+\beta = \pi(0.1) = P(\#H = 0,10 \mid \#H \sim Bin(10,0.1)) = \Sexpr{sum(dbinom(x=c(0,10),size=10,prob=0.1))}
+\]
+\end{proof}
+
+\paragraph{\#9.11.6} Consider the coin tossing example of \S9.1. Suppose that instead of tossing the coin 10 times, the coin was tossed until a head came up and the total number of tosses, $X$, was recorded.
+\begin{enumerate}
+  \item[a)] If the prior probabilities are equal, which outcomes favor $H_0$ and which favor $H_1$.
+  \item[c)] What is the significance level of a test that rejects $H_0$ if $X \geq 8$?
+  \item[d)] What is the power of this test?
+\end{enumerate}
+
+\begin{proof}[Solution]
+In this situation, the probability that the first coin yields a heads is $p_0 = 0.5$ and the second is $p_1 = 0.7$. Our test statistic, $X$ is now distributed according to a geometric distribution:
+\[
+P(X=k;p) = p(1-p)^{k-1}, k\in\{1,2,\ldots\}
+\]
+If $P(H_0) = P(H_1)$, then determining the outcomes which favor $H_0$ is equivalent to solving the following inequality:
+\[
+\dfrac{P(X=x\mid H_0)}{P(X=x\mid H_1)} > 1 \Leftrightarrow \dfrac{0.5^{x}}{0.7(0.3)^{x-1}} > 1 \Leftrightarrow \left(\dfrac{5}{3}\right)^{x} > \dfrac{7}{3} \Leftrightarrow x > \Sexpr{log(7/3)/log(5/3)}
+\]
+So, $x \geq \Sexpr{round(log(7/3)/log(5/3),digits=0)}$ would favor $H_0$ over $H_1$. Consequently, $x \leq \Sexpr{round(log(7/3)/log(5/3),digits=0)-1}$ would favor $H_1$ over $H_0$. 
+
+A test that rejects if $X \geq 8$ would have significance level
+\[
+\alpha = P(X \geq 8 \mid H_0) = \Sexpr{pgeom(q=6,prob=0.5,lower.tail=F)}
+\]
+It would have power
+\[
+\beta = P(X \geq 8 \mid H_1) = \Sexpr{pgeom(q=6,prob=0.7,lower.tail=F)}
+\]
+And this low power makes sense: under the alternative we shouldn't have to wait long to see a heads. Thus, a rule that asks for 7 consecutive tails, is surely going to have a low rate of accepting the alternative.
+\end{proof}
+
+\paragraph{\#9.11.7} Let $X_1, \ldots, X_n \stackrel{iid}{\sim} Poisson(\lambda)$. Find the likelihood ratio for testing $H_0 : \lambda = \lambda_0$ versus $H_1 : \lambda = \lambda_1$, where $\lambda_1 > \lambda_0$. Use the fact that the sum of independent Poisson random variables follows a Poisson distribution to explain how to determine a rejection region for a test at level $\alpha$. 
+
+\begin{proof}[Solution]
+  Given our data, $\mathbf{x} = (x_1, \ldots, x_n)$, and a stochastic model of it, $\mathbf{X} = (X_1, \ldots, X_n)$, we write the likelihood ratio as
+  \[
+  LR(\mathbf{X}) = \dfrac{P(\mathbf{X}\mid H_0)}{P(\mathbf{X} \mid H_1)} = \dfrac{\prod_{i=1}^{n} e^{-\lambda_0} \dfrac{\lambda_0^{X_i}}{X_i!}}{\prod_{i=1}^{n} e^{-\lambda_1} \dfrac{\lambda_1^{X_i}}{X_i!}} = e^{-(\lambda_0 - \lambda_1)} \left(\dfrac{\lambda_0}{\lambda_1}\right)^{\sum_{i=1}^{n} X_i} = e^{-(\lambda_0 - \lambda_1)} \left(\dfrac{\lambda_0}{\lambda_1}\right)^{T(\mathbf{X})}
+  \]
+  The first thing we notice is that the condition, $\lambda_1 > \lambda_0$ imply that our likelihood shrinks \textit{if and only if} $T(\mathbf{X})$ grows. Thus, if we use the (general) rule that we reject if $T(\mathbf{X}) \geq c$, then we are performing a test that's equivalent to the Likelihood Ratio Test. 
+  
+  The value $c$ will determine the significance of this test. So, to find an appropriate value, we'll use the hint in the problem statement, and identify the null (and alternative) distribution of our test statistic as
+  \[
+  T(\mathbf{X}) \stackrel{H_i}{\sim} Poisson(n\lambda_i), \qquad i=0,1
+  \]
+  
+  Hence, to create a test with significance level $\alpha \in (0,1)$, we find the value $c \in \mathbb{N}$ such that 
+  \[
+  P(T(\mathbf{X}) \geq c-1 \mid H_0) > \alpha \text{ and yet } P(T(\mathbf{X}) \geq c \mid H_0) \leq \alpha
+  \]
+  
+  A concrete example of this would be for $n=3$, $\lambda_0 = 1$, and $\lambda_1 = 2$, then $T(\mathbf{X}) \stackrel{H_0}{\sim} Poisson(3)$, and 
+  <<echo=FALSE>>=
+  q <- 0:10
+  tail.probs <- ppois(q=q-1,lambda=3,lower.tail=F)
+  tbl <- t(as.matrix(tail.probs))
+  rownames(tbl) <- c("P(T(X) >= x)")
+  colnames(tbl) <- c("x = 0",1:10)
+  tbl
+  @
+  Hence, if we wanted to limit our type-I error to being no greater than 5\%, we'd want to chose $c = 7$, and in this case, our exact level is \Sexpr{ppois(q=6,lambda=3,lower.tail=F)*100}\%.
+\end{proof}
+
+\paragraph{\#9.11.9} Let $X_1, \ldots, X_{25}$ be a sample from a normal distribution having a variance of 100. Find the rejection region for a test at level $\alpha = 0.10$ of $H_0 \mu = 0$ versus $H_{1}: \mu = 1.5$. What is the power of the test? Repeat for $\alpha = 0.01$. 
+
+\begin{proof}[Solution] Since we're dealing with two, simple, hypotheses, the Neymann-Pearson lemma tells us that the likelihood ratio test is the most powerful test. So let's look at the likelihood ratio:
+
+\begin{align*}
+  LR(\X) &= \dfrac{P(\X \mid H_0)}{P(\X \mid H_1)} \\
+         &= \dfrac{\displaystyle \prod_{i=1}^{25} f(X_i;\mu=0,\sigma=10)}{\displaystyle \prod_{i=1}^{25} f(X_i;\mu=1.5,\sigma=10)} \\
+         &= \exp\left\{ -\frac{1}{200}\left(\sum_{i=1}^{25} X_i^2 - \sum_{i=1}^{25}(X_i-1.5)^2\right) \right\} \\
+         &= \exp\left\{ -\frac{1}{200}\left(3\sum_{i=1}^{25}X_i - 25(1.5)^2\right) \right\} \\
+         &= \exp\left\{ -\frac{1}{200}\left(3 T(\X) - \Sexpr{25*(1.5)^2}\right)\right\}
+\end{align*}
+So, the first thing we notice, here, is that for $T(\X)$ sufficiently large, our likelihood ratio behaves like $e^{-x}$ (which decreases as $x$ increases). This means that for some prescribed $\alpha \in (0,1)$, we can use $T(\X) \geq c_{\alpha}$ as an equivalent test with significance level $\alpha$.
+
+To find $c_{\alpha}$, we recognize that 
+\[
+  T(\X) = \sum_{i=1}^{25} X_i \stackrel{H_i}{\sim}
+  \begin{cases}
+    N(\mu = 0, \sigma = 50) &\text{ if $i=0$} \\
+    N(\mu = \Sexpr{25*1.5}, \sigma= 50) &\text{ if $i=1$}
+  \end{cases}
+\]
+Hence 
+  \begin{align*}
+    \alpha &= P( T(\X) \geq c_{\alpha} \mid H_0) \\
+           &= P( T(\X)/50 \geq c_{\alpha}/50 \mid H_0) \\
+           &= P( Z \geq c_{\alpha}/50 ) \\
+           &= 1 - \Phi(c_{\alpha}/50)
+  \end{align*}
+which implies that $c_{\alpha} = 50 \times z_{\alpha}$, where
+  \[
+    \Phi(z_{\alpha}) = 1-\alpha
+  \]
+  Using this result, we find $c_{0.1} = \Sexpr{50*qnorm(p=0.9)}$, and $c_{0.01} = \Sexpr{50*qnorm(p=0.99)}$. 
+  The power for the test when $\alpha = 0.1$ is found via
+  \begin{align*}
+  \beta_{0.1} &= P( T(\X) \geq c_{0.1} \mid H_1) \\
+        &= P\left( \dfrac{T(\X) - 37.5}{50} \geq \dfrac{50 z_{0.1} - 37.5}{50} \mid H_1 \right) \\
+        &= P( Z \geq \Sexpr{q1 <- (50*qnorm(p=0.9)-37.5)/50; q1}) \\
+        &= \Sexpr{pnorm(q=q1,lower.tail=F)}
+  \end{align*}
+  Similarly, the power for the test when $\alpha = 0.01$ is 
+  \[
+  \beta_{0.01} = \Sexpr{q2 <- (50*qnorm(p=0.99)-37.5)/50; pnorm(q=q2,lower.tail=F)}
+  \]
+  (Note there are discrepancies between my numbers and those in the back of the book, but there merely a consequence of rounding.)
+\end{proof}
+
+\paragraph{\#9.11.12} Let $X_1, \ldots, X_n$ be a random sample from an exponential distirbution with the density function $f(x; \theta) = \theta \exp[-\theta x]$. Derive a likelihood ratio test of $H_0 : \theta = \theta_0$ versus $H_1: \theta \neq \theta_0$, and show that the rejection region is of the form $\{ \Xbar \exp[-\theta_0 \Xbar] \leq c \}$. 
+
+\begin{proof}[Solution]
+  Since we're dealing with a two-sided alternative, we should beg to the \textit{Generalized} Likelihood Ratio test:
+  \[
+  GLR(\X) = \dfrac{\max_{\theta = \theta_0} P(\X;\theta)}{\max_{\omega \in \Omega} P(\X ; \theta)}
+  \]
+  while the numerator is simply $P(\X;\theta_0)$, we'll need to do some calculus to determine the denominator. 
+  \begin{align*}
+    P(\X;\theta) &= \prod_{i=1}^{n} f_{X}(X_i;\theta) = \theta^n \exp\left(-\theta\sum_{i=1}^{n}X_i\right) \\
+    \Rightarrow \ell_n(\theta) &= \log(P(\X;\theta)) \\
+        &= n\log(\theta) - \theta\sum_{i=1}^{n}X_i
+  \end{align*}
+  Hence,
+  \[
+  \ell_n'(\hat{\theta}) = 0 \Leftrightarrow \dfrac{n}{\hat{\theta}} - \sum_{i=1}^{n} X_i = 0 \Leftrightarrow \hat{\theta} = \dfrac{1}{\Xbar}
+  \]
+  and since $\ell_{n}''(\theta) = -n\theta^{-2} < 0$ for all $\theta$, it follows that our critical point, $\hat{\theta}$ is a global maximum. Thus,
+  \begin{align*}
+    GLR(\X) &= \dfrac{\theta_0^{n} e^{-n\theta_0\Xbar}}{\hat{\theta}^n e^{-n\hat{\theta}\Xbar}} \\
+            &= \left(\dfrac{\theta_0}{\hat{\theta}}\right)^{n} \exp\left( -n\theta_0\Xbar + n\right) \\
+            &= e^{n}\left(\theta_0 \Xbar e^{-\theta_0 \Xbar}\right)^{n} \\
+            &= e^{n} \left( \theta_0 T(\X) \right)^{n} \\
+            &= e^{n} \theta_{0}^{n} T(\X)^{n}
+  \end{align*}
+  where $T(\X) = \Xbar e^{-\theta_0 \Xbar} \geq 0 $. Recall, though, that the rule here is to reject when the GLR is small. That is,
+  \[
+  GLR(\X) \leq \lambda_{\alpha} \Longleftrightarrow e^{n}\theta_{0}^{n} T(\X)^{n} \leq \lambda_{\alpha} \Longleftrightarrow T(\X) \leq \sqrt[n]{e^{-n}\theta_{0}^{-n}\lambda_{\alpha}} = c_{\alpha}
+  \]
+\end{proof}
+
+\paragraph{\#11.6.23} Let $X_1, \ldots, X_n \stackrel{iid}{\sim} F$ and $Y_1, \ldots, Y_{m} \stackrel{iid}{\sim} G$. The hypothesis to be tested is that $F=G$. Suppose for simplicity that $m+n$ is even so that in the combined sample of $X$'s and $Y$'s, $(m+n)/2$ observations are less than the median and $(m+n)/2$ are greater.
+\begin{enumerate}
+  \item[a)] As a test statistic, consider $T$, the number of $X$'s less than the median of the combined sample. Show that $T$ follows a hypergeometric distribution under the null hypothesis:
+  \[
+    P(T=t) = \dfrac{\displaystyle \binom{\frac{m+n}{2}}{t}\binom{\frac{m+n}{2}}{n-t}}{\displaystyle\binom{m+n}{n}}
+  \]
+  Explain how to form a rejection region for this test.
+  \item[b)] Show how to find a confidence interval for the difference between the median of $F$ and the median of $G$ under the shift model, $G(x) = F(x-\Delta)$. (Hint: use the order statistics.)
+  \item[c)] Apply the results (a) and (b) to the data of problem 21.
+\end{enumerate}
+\begin{proof}[Solution]
+For starters, we should consider what are some of the implications of assuming that $F$ and $G$ are the same. Suppose we pooled the $X$'s and $Y$'s together, and and sorted them so that we had
+\[
+W_{(1)} \leq W_{(2)} \leq W_{(3)} \leq \cdots \leq W_{(m+n)}
+\]
+where $W_{(i)}$ is some observation from the $X$'s or the $Y$'s.
+
+Now, if $F=G$, we have that the probability that $W_{(i)}$ came from the sample of $X$'s is no longer a function of its place in the ordering. All order statics have the same (unconditional) chance of being from the sample of $X$'s, $n/(m+n)$. Their conditional chance changes as we learn more, however. E.g. 
+\[
+  P(W_{(2)} \in \X \mid W_{(1)} \in \X) = \frac{n-1}{m+n}
+\]
+
+So, under the null-hypothesis, we may think of the location of each $X_i$ among the $W_{(i)}$ as a consequence of a draw, without replacement, from the set $\{1,2,\ldots, n+m\}$. This is precisely why our test statistic, under the null has a hypergeometric distribution.
+
+Let's work through a concrete example. Say $n=10$, $m = 12$, so that $n+m=22$, and $(n+m)/2 = 11$, and we want to count the ways 6 $X$'s can lie below the sample median. First, we need to count the ways we can observe exactly 6 $X$'s below the sample median. We know that 11 of the pooled observations are below the median, which gives us 6 "slots" for our $X$'s to occupy. That is, there are $\binom{11}{6}$ ways for 6 $X$'s to be below the median. However, for every way to view 6 $X$'s below the median, we'd have to observe ($10-6 =$) 4 $X$'s above the median. There are $\binom{11}{4}$ ways to do that. Because we want to count all the ways we can see 6 below and 4 above, we should multiply these counts. That is, the total number of ways to observe exactly 6 $X$'s below is
+\[
+  \binom{11}{6} \times \binom{11}{4}
+\]
+To turn this into a probability, we need to count the total number of ways the $X$'s could have been "sprinkled" about the pooled collection. Again, back to our ``slots'' analogy. We have 22 total slots to hand out to each of the, 10, $X$'s so there are $\binom{22}{10}$ total configurations we could have observed. Thus,
+\[
+  P(T=6) = \dfrac{\binom{11}{6}\binom{11}{4}}{\binom{22}{10}}
+\]
+Generalizing this argument is tantamount to replacing ``11'' with $(m+n)/2$, ``6'' with $t$, and ``10'' with $n$.
+
+To develop a rejection region for $T$, we need to we'd calculate tail probabilities of $T$ and find cut-off points in both tails that would yield a desired level. For instance, if we use the concrete example above, we have
+  <<echo=FALSE>>=
+  N <- 10; M <- 12 # |X| = N, |Y| = M
+  left.tail.probs <- phyper(q=0:N,m=N+M/2,n=M+N/2,k=N)
+  right.tail.probs <- phyper(q=0:N-1,m=N+M/2,n=M+N/2,k=N,lower.tail=F)
+  tbl <- rbind(left.tail.probs,right.tail.probs)
+  rownames(tbl) <- c("P(T <= t)", "P(T >= t)")
+  colnames(tbl) <- c("t = 0", 1:N )
+  print(tbl)
+  @
+  So if we set up the rule, ``reject if $T \not\in [3,7]$'', then we'll incorrectly reject with probability \Sexpr{(tbl[1,3] + tbl[2,9])*100}\%. Note that we didn't have to take a region that was centered about any point, and that for a particular level, $\alpha$, there may be many regions that work.
+\end{proof}
+
+\paragraph{\#11.6.27} Find the exact null distribution of $W_{+}$ in the case where $n=4$. 
+\begin{proof}[Solution]
+This problem can be done with pencil and paper, but your best to understand how to have \texttt{R} do it.
+  \begin{enumerate}
+    \item Like when determining the distribution of any random variable, you should first identify its range. Since $W_{+}$ is the sum of the ranks of the positive differences, it can be anything from 0 to $n(n+1)/2$, where $n$ is the size of your sample. In our case, $n=4$, so the range is $0 \leq W_{+} \leq 10$. 
+    \item To get a feel for $P(W_{+} = x)$ for some $x$, we should practice on a few concrete cases. The easy case is $x=0$. Here, this can only happen if all differences are negative, and that happens 1 in $2^4 = 16$ times. Likewise, $x=10$ can only happen if all are positive, so that (also) has probability $1/16$. Now, say $x = 7$. This is ``trickier'', if only because there are multiple ways to take any combination of $\{1,2,3,4\}$ and sum them to 7. E.g. $3 + 4 = 1 + 2 + 4$. Since $n=4$ is small, this isn't much of a doozy. If $n=15$, for instance, then you could have
+    \[
+     3+4 = 1 + 2 + 4 = 6 + 1 = 5 + 2 = 7
+    \]
+    which are 5 (you could 7, in this case as a vacuous sum) different ways.
+    \item You could continue in this fashion, making sure to find all the ways to make all the numbers between 0 and 10. Or, you can go about this by considering all the ways we can choose $k$ numbers from 4, and summing those various combinations, then tabling the results. In \texttt{R}:
+    <<eval=T>>=
+    tbl <- table(unlist(sapply(X=0:4, FUN=function(k){combn(x=1:4,m=k,FUN=sum)})))
+    prop.table(tbl)
+    @
+    And as you can see, this coincides with \texttt{R}'s build in density function for $W_{+}$:
+    <<>>=
+    dsignrank(x=0:10,n=4)
+    @
+  \end{enumerate}
+\end{proof}
+\end{document}
